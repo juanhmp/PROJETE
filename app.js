@@ -1,22 +1,52 @@
+// ============================================================
+// 1. BIBLIOTECAS USADAS PELO SERVIDOR
+// ============================================================
+
+// Express cria o servidor e as rotas, como /api/login.
 const express = require('express');
+
+// Path monta caminhos de arquivos de um jeito que funciona no Windows.
 const path = require('path');
+
+// SQLite é o banco de dados salvo no arquivo dados.db.
 const sqlite3 = require('sqlite3').verbose();
+
+// Bcrypt protege as senhas antes de salvá-las no banco.
 const bcrypt = require('bcryptjs');
+
+// Session mantém o usuário conectado depois do login.
 const session = require('express-session');
+
+// Helmet adiciona proteções básicas nas respostas do servidor.
 const helmet = require('helmet');
+
+// Rate limit limita tentativas seguidas de login.
 const { rateLimit } = require('express-rate-limit');
+
+// Crypto cria códigos aleatórios e faz comparações seguras.
 const crypto = require('crypto');
+
+// ============================================================
+// 2. CONFIGURAÇÕES PRINCIPAIS
+// ============================================================
 
 const app = express();
 const PORT = 3000;
 const db = new sqlite3.Database(path.join(__dirname, 'dados.db'));
-const PRODUCAO = process.env.NODE_ENV === 'production';
-const SESSION_SECRET = process.env.SESSION_SECRET || 'troque-esta-chave-no-ambiente-de-producao';
-const BASE_API_KEY = process.env.BASE_API_KEY || '';
-const OPERATOR_SECRET = process.env.OPERATOR_SECRET || '';
-const OPERATOR_SALT = process.env.OPERATOR_SALT || 'ff480e86b329a506e7f63d7929a23511';
-const OPERATOR_HASH = process.env.OPERATOR_HASH || 'd79a4effacf26474a8aa9d5dc6e658d3b9aaa584f4160fc1b9e90a1a83e8c0be2febfa1285f540957c02f47602e3229d360bd474b5257a4fc411fa6ab67958ee';
-const PERMITIR_OPERADOR_REMOTO = process.env.ALLOW_OPERATOR_REMOTE === 'true';
+// Estas configurações podem vir do computador que executa o servidor.
+// O valor depois de || é usado quando nenhuma configuração foi informada.
+const producao = process.env.NODE_ENV === 'production';
+const segredoDaSessao = process.env.SESSION_SECRET || 'troque-esta-chave-no-ambiente-de-producao';
+const chaveDaBase = process.env.BASE_API_KEY || '';
+const segredoDoOperador = process.env.OPERATOR_SECRET || '';
+const saltDoOperador = process.env.OPERATOR_SALT || 'ff480e86b329a506e7f63d7929a23511';
+const hashDoOperador = process.env.OPERATOR_HASH ||
+  'd79a4effacf26474a8aa9d5dc6e658d3b9aaa584f4160fc1b9e90a1a83e8c0be2febfa1285f540957c02f47602e3229d360bd474b5257a4fc411fa6ab67958ee';
+const permitirOperadorRemoto = process.env.ALLOW_OPERATOR_REMOTE === 'true';
+
+// ============================================================
+// 3. PREPARAÇÃO DO EXPRESS E DA SESSÃO
+// ============================================================
 
 app.disable('x-powered-by');
 app.use(helmet({ contentSecurityPolicy: false }));
@@ -24,13 +54,13 @@ app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(session({
   name: 'lumi.sid',
-  secret: SESSION_SECRET,
+  secret: segredoDaSessao,
   resave: false,
   saveUninitialized: false,
   cookie: {
     httpOnly: true,
     sameSite: 'lax',
-    secure: PRODUCAO,
+    secure: producao,
     maxAge: 8 * 60 * 60 * 1000
   }
 }));
@@ -39,6 +69,9 @@ if (!process.env.SESSION_SECRET) {
   console.warn('AVISO: usando SESSION_SECRET de desenvolvimento. Defina SESSION_SECRET antes de publicar o sistema.');
 }
 
+// As três funções desta parte transformam o SQLite, que normalmente usa
+// callbacks, em Promises. Assim podemos usar await e ler o código de cima
+// para baixo. run altera dados, get pega uma linha e all pega várias linhas.
 function run(sql, params = []) {
   return new Promise((resolve, reject) => {
     db.run(sql, params, function (erro) {
@@ -72,6 +105,10 @@ async function garantirColuna(tabela, nome, definicao) {
     await run(`ALTER TABLE ${tabela} ADD COLUMN ${nome} ${definicao}`);
   }
 }
+
+// ============================================================
+// 4. CRIAÇÃO E ATUALIZAÇÃO DO BANCO DE DADOS
+// ============================================================
 
 async function iniciarBanco() {
   await run(`CREATE TABLE IF NOT EXISTS usuarios (
@@ -118,6 +155,7 @@ async function iniciarBanco() {
   await garantirColuna('usuarios', 'ultimo_login', 'TEXT');
   await garantirColuna('ocorrencias', 'status', "TEXT NOT NULL DEFAULT 'pendente'");
   await garantirColuna('ocorrencias', 'criado_por', 'INTEGER');
+  await garantirColuna('ocorrencias', 'foto', 'TEXT');
   await garantirColuna('medicoes', 'lote_id', 'TEXT');
 
   await run(`INSERT OR IGNORE INTO configuracoes (chave, valor) VALUES ('modo_teste', '0')`);
@@ -131,10 +169,19 @@ async function iniciarBanco() {
     );
     console.log('Primeiro acesso: admin / Admin@123 (troca de senha obrigatória)');
   } else {
-    await run("UPDATE usuarios SET criado_em = COALESCE(criado_em, ?) WHERE criado_em IS NULL", [new Date().toISOString()]);
+    await run(
+      "UPDATE usuarios SET criado_em = COALESCE(criado_em, ?) WHERE criado_em IS NULL",
+      [new Date().toISOString()]
+    );
   }
 }
 
+// ============================================================
+// 5. FUNÇÕES DE LOGIN E PERMISSÃO
+// ============================================================
+
+// Retorna somente as informações que podem ser enviadas ao navegador.
+// A senha nunca é incluída.
 function usuarioPublico(u) {
   return {
     id: u.id,
@@ -155,6 +202,8 @@ async function carregarUsuarioSessao(req) {
   return u;
 }
 
+// Middleware é uma função executada antes da rota.
+// Esta deixa continuar apenas quando existe um usuário conectado.
 async function exigirAutenticacao(req, res, next) {
   try {
     const u = await carregarUsuarioSessao(req);
@@ -175,15 +224,16 @@ function segredoCorresponde(recebido, esperado) {
   return crypto.timingSafeEqual(a, b);
 }
 
+// Confere a chave da Central do Operador sem guardar a senha aberta no código.
 function senhaOperadorCorresponde(recebida) {
-  if (OPERATOR_SECRET) return segredoCorresponde(recebida, OPERATOR_SECRET);
-  const calculado = crypto.scryptSync(String(recebida || ''), OPERATOR_SALT, 64);
-  const esperado = Buffer.from(OPERATOR_HASH, 'hex');
+  if (segredoDoOperador) return segredoCorresponde(recebida, segredoDoOperador);
+  const calculado = crypto.scryptSync(String(recebida || ''), saltDoOperador, 64);
+  const esperado = Buffer.from(hashDoOperador, 'hex');
   return calculado.length === esperado.length && crypto.timingSafeEqual(calculado, esperado);
 }
 
 function exigirMaquinaOperador(req, res, next) {
-  if (PERMITIR_OPERADOR_REMOTO) return next();
+  if (permitirOperadorRemoto) return next();
   const ip = String(req.socket.remoteAddress || '');
   const local = ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1';
   if (!local) return res.status(403).send('A Central do Operador só pode ser acessada na máquina do servidor.');
@@ -216,7 +266,12 @@ async function exigirAdmin(req, res, next) {
   try {
     const u = await carregarUsuarioSessao(req);
     if (!u) return res.status(401).json({ mensagem: 'Faça login para continuar.' });
-    if (u.trocar_senha) return res.status(403).json({ mensagem: 'Troque sua senha antes de continuar.', codigo: 'TROCA_SENHA' });
+    if (u.trocar_senha) {
+      return res.status(403).json({
+        mensagem: 'Troque sua senha antes de continuar.',
+        codigo: 'TROCA_SENHA'
+      });
+    }
     if (u.role !== 'admin') return res.status(403).json({ mensagem: 'Acesso permitido somente a administradores.' });
     req.usuario = u;
     next();
@@ -254,11 +309,17 @@ const limitarLogin = rateLimit({
   message: { mensagem: 'Muitas tentativas de login. Aguarde alguns minutos e tente novamente.' }
 });
 
+// ============================================================
+// 6. PÁGINAS DO SITE
+// ============================================================
+
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'pages', 'login.html')));
 app.get('/login', (req, res) => res.sendFile(path.join(__dirname, 'pages', 'login.html')));
 app.get('/login-admin', (req, res) => res.sendFile(path.join(__dirname, 'pages', 'admin-login.html')));
 app.get('/esqueceu-senha', (req, res) => res.sendFile(path.join(__dirname, 'pages', 'esqueceu-senha.html')));
-app.get('/operador-login', exigirMaquinaOperador, (req, res) => res.sendFile(path.join(__dirname, 'pages', 'operador-login.html')));
+app.get('/operador-login', exigirMaquinaOperador, (req, res) => {
+  res.sendFile(path.join(__dirname, 'pages', 'operador-login.html'));
+});
 app.get('/operador', exigirMaquinaOperador, (req, res) => paginaOperador(req, res, 'operador.html'));
 
 app.get('/admin', (req, res) => paginaProtegida('admin', req, res, 'admin.html'));
@@ -267,6 +328,10 @@ app.get('/mapa', (req, res) => res.sendFile(path.join(__dirname, 'pages', 'mapa.
 app.get('/ocorrencias', (req, res) => paginaProtegida('admin', req, res, 'ocorrencias.html'));
 app.get('/registrar', (req, res) => res.sendFile(path.join(__dirname, 'pages', 'registrar.html')));
 app.get('/senha', (req, res) => paginaProtegida('admin', req, res, 'senha.html'));
+
+// ============================================================
+// 7. CENTRAL DO OPERADOR
+// ============================================================
 
 const limitarOperador = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -294,7 +359,7 @@ app.post('/api/operador/logout', exigirMaquinaOperador, exigirOperador, exigirCs
   req.session.destroy(() => {
     res.clearCookie('lumi.sid');
     res.json({ sucesso: true });
-  });
+      });
 });
 
 app.get('/api/operador/sessao', exigirMaquinaOperador, exigirOperador, (req, res) => {
@@ -317,14 +382,27 @@ app.get('/api/operador/administradores', exigirMaquinaOperador, exigirOperador, 
   }
 });
 
-app.post('/api/operador/administradores', exigirMaquinaOperador, exigirOperador, exigirCsrfOperador, async (req, res) => {
+app.post(
+  '/api/operador/administradores',
+  exigirMaquinaOperador,
+  exigirOperador,
+  exigirCsrfOperador,
+  async (req, res) => {
   try {
     const nome = String(req.body.nome || '').trim();
     const username = String(req.body.username || '').trim();
     const senha = String(req.body.senhaTemporaria || '');
     if (nome.length < 2 || nome.length > 80) return res.status(400).json({ mensagem: 'Informe um nome válido.' });
-    if (!usernameValido(username)) return res.status(400).json({ mensagem: 'O usuário deve ter de 3 a 32 caracteres e usar apenas letras, números, ponto, hífen ou sublinhado.' });
-    if (!senhaValida(senha)) return res.status(400).json({ mensagem: 'A senha temporária deve ter 8 a 72 caracteres, com letra maiúscula, minúscula e número.' });
+    if (!usernameValido(username)) {
+      return res.status(400).json({
+        mensagem: 'O usuário deve ter de 3 a 32 caracteres e usar apenas letras, números, ponto, hífen ou sublinhado.'
+      });
+    }
+    if (!senhaValida(senha)) {
+      return res.status(400).json({
+        mensagem: 'A senha temporária deve ter 8 a 72 caracteres, com letra maiúscula, minúscula e número.'
+      });
+    }
     const existe = await get('SELECT id FROM usuarios WHERE username = ?', [username]);
     if (existe) return res.status(409).json({ mensagem: 'Esse nome de usuário já existe.' });
     const resultado = await run(
@@ -332,7 +410,10 @@ app.post('/api/operador/administradores', exigirMaquinaOperador, exigirOperador,
        VALUES (?, ?, 'admin', ?, 1, 1, ?)`,
       [username, bcrypt.hashSync(senha, 12), nome, new Date().toISOString()]
     );
-    res.status(201).json({ mensagem: 'Administrador criado. A senha é temporária e deverá ser alterada no primeiro login.', id: resultado.id });
+    res.status(201).json({
+      mensagem: 'Administrador criado. A senha é temporária e deverá ser alterada no primeiro login.',
+      id: resultado.id
+    });
   } catch (erro) {
     res.status(500).json({ mensagem: 'Erro ao criar administrador.' });
   }
@@ -373,7 +454,12 @@ app.put('/api/operador/administradores/:id/redefinir-senha', exigirMaquinaOperad
   } catch (erro) {
     res.status(500).json({ mensagem: 'Erro ao redefinir senha.' });
   }
-});
+  }
+);
+
+// ============================================================
+// 8. LOGIN E SESSÃO DO ADMINISTRADOR
+// ============================================================
 
 app.post('/api/login', limitarLogin, async (req, res) => {
   try {
@@ -430,6 +516,10 @@ app.put('/api/minha-senha', exigirAutenticacao, async (req, res) => {
   }
 });
 
+// ============================================================
+// 9. OCORRÊNCIAS
+// ============================================================
+
 app.get('/api/ocorrencias', exigirAdmin, async (req, res) => {
   try {
     res.json(await all('SELECT * FROM ocorrencias ORDER BY id DESC'));
@@ -440,22 +530,63 @@ app.get('/api/ocorrencias', exigirAdmin, async (req, res) => {
 
 app.post('/api/ocorrencias', async (req, res) => {
   try {
-    const { location, description, priority } = req.body;
-    if (!location || !description || !['high', 'medium', 'low'].includes(priority)) {
-      return res.status(400).json({ mensagem: 'Preencha os campos obrigatórios corretamente.' });
+    const { location, description, priority, foto } = req.body;
+
+    if (
+      !location ||
+      !description ||
+      !['high', 'medium', 'low'].includes(priority)
+    ) {
+      return res.status(400).json({
+        mensagem: 'Preencha os campos obrigatórios corretamente.'
+      });
     }
-    if (String(location).length > 120 || String(description).length > 1000) {
-      return res.status(400).json({ mensagem: 'Localização ou descrição muito longa.' });
+
+    if (
+      String(location).length > 120 ||
+      String(description).length > 1000
+    ) {
+      return res.status(400).json({
+        mensagem: 'Localização ou descrição muito longa.'
+      });
     }
+
+    if (foto && !String(foto).startsWith('data:image/')) {
+      return res.status(400).json({
+        mensagem: 'A foto enviada é inválida.'
+      });
+    }
+
+    if (foto && String(foto).length > 1400000) {
+      return res.status(400).json({
+        mensagem: 'A foto deve ter no máximo 1 MB.'
+      });
+    }
+
     const timestamp = new Date().toISOString();
+
     const resultado = await run(
-      `INSERT INTO ocorrencias (location, description, priority, status, timestamp, criado_por)
-       VALUES (?, ?, ?, 'pendente', ?, ?)`,
-      [String(location).trim(), String(description).trim(), priority, timestamp, null]
+      `INSERT INTO ocorrencias
+        (location, description, priority, status, timestamp, criado_por, foto)
+       VALUES (?, ?, ?, 'pendente', ?, ?, ?)`,
+      [
+        String(location).trim(),
+        String(description).trim(),
+        priority,
+        timestamp,
+        null,
+        foto || null
+      ]
     );
-    res.status(201).json({ mensagem: 'Ocorrência registrada com sucesso.', id: resultado.id });
+
+    res.status(201).json({
+      mensagem: 'Ocorrência registrada com sucesso.',
+      id: resultado.id
+    });
   } catch (erro) {
-    res.status(500).json({ mensagem: 'Erro ao registrar ocorrência.' });
+    res.status(500).json({
+      mensagem: 'Erro ao registrar ocorrência.'
+    });
   }
 });
 
@@ -470,6 +601,10 @@ app.put('/api/ocorrencias/:id/status', exigirAdmin, async (req, res) => {
     res.status(500).json({ mensagem: 'Erro ao atualizar ocorrência.' });
   }
 });
+
+// ============================================================
+// 10. MEDIÇÕES E MAPA DE CALOR
+// ============================================================
 
 app.get('/api/medicoes', exigirAdmin, async (req, res) => {
   try {
@@ -522,12 +657,14 @@ async function salvarMedicao(dado, origem = 'bluetooth', loteId = null) {
   return { id: resultado.id, luminosidade: valor, lat: latitude, lng: longitude, lote_id: loteId, timestamp };
 }
 
+// Aceita o envio quando ele vem de um administrador conectado ou da base
+// Bluetooth que conhece a chave configurada em BASE_API_KEY.
 async function exigirBaseOuAdmin(req, res, next) {
   try {
     const u = await carregarUsuarioSessao(req);
     if (u && u.role === 'admin' && !u.trocar_senha) { req.usuario = u; return next(); }
     const chave = req.get('x-base-key') || '';
-    if (BASE_API_KEY && chave === BASE_API_KEY) return next();
+    if (chaveDaBase && chave === chaveDaBase) return next();
     res.status(401).json({ mensagem: 'Envio não autorizado. Use uma sessão de administrador ou uma chave da base.' });
   } catch (erro) {
     res.status(500).json({ mensagem: 'Erro ao validar a origem dos dados.' });
@@ -564,6 +701,10 @@ app.post('/api/medicoes/lote', exigirBaseOuAdmin, async (req, res) => {
     res.status(500).json({ mensagem: 'Erro ao registrar lote de medições.' });
   }
 });
+
+// ============================================================
+// 11. MODO DE TESTE E SIMULAÇÃO
+// ============================================================
 
 app.get('/api/configuracao/teste', exigirAdmin, async (req, res) => {
   try {
@@ -619,7 +760,7 @@ function adicionarTrecho(medicoes, x1, y1, x2, y2, quantidade, inicio, intervalo
     const y = y1 + (y2 - y1) * t + (Math.random() - 0.5) * 0.009;
 
     // Mantém a simulação dentro de uma área urbana arredondada/irregular.
-    if ((x * x) + (y * y) > 0.98) continue;
+        if ((x * x) + (y * y) > 0.98) continue;
 
     const pos = coordenadaDaArea(x, y);
     medicoes.push({
@@ -695,8 +836,14 @@ app.get('/api/dashboard', exigirAdmin, async (req, res) => {
   }
 });
 
+// ============================================================
+// 12. FINALIZAÇÃO DO SERVIDOR
+// ============================================================
+
+// Se nenhuma rota acima foi encontrada, o servidor responde com erro 404.
 app.use((req, res) => res.status(404).json({ mensagem: 'Rota não encontrada.' }));
 
+// Primeiro prepara o banco. Somente depois começa a aceitar acessos na porta 3000.
 iniciarBanco()
   .then(() => app.listen(PORT, () => console.log(`Servidor rodando em http://localhost:${PORT}`)))
   .catch(erro => console.error('Erro ao iniciar banco:', erro));
