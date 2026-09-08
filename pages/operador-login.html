@@ -1,1 +1,132 @@
-<!doctype html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Central do Operador</title><style>*{box-sizing:border-box}body{margin:0;min-height:100vh;font-family:Inter,Segoe UI,Arial,sans-serif;background:linear-gradient(135deg,#111827,#1f2937);display:flex;align-items:center;justify-content:center;padding:24px;color:#111827}.card{width:min(430px,100%);background:#fff;border-radius:20px;padding:32px;box-shadow:0 24px 60px rgba(0,0,0,.35)}.head{text-align:center;margin-bottom:24px}.icon{width:66px;height:66px;border-radius:18px;margin:0 auto 14px;display:grid;place-items:center;background:#111827;color:#fff;font-size:30px}h1{margin:0 0 8px}.muted{color:#6b7280;line-height:1.5}label{display:block;font-size:14px;font-weight:700;margin-bottom:8px}input{width:100%;padding:13px 14px;border:1px solid #d1d5db;border-radius:10px;font:inherit;outline:0}input:focus{border-color:#111827;box-shadow:0 0 0 3px rgba(17,24,39,.12)}button,a{width:100%;display:flex;justify-content:center;text-decoration:none;border:0;border-radius:10px;padding:13px;font:inherit;font-weight:700;cursor:pointer}.primary{background:#111827;color:#fff;margin-top:18px}.back{background:#f3f4f6;color:#374151;margin-top:10px}.error{color:#b91c1c;min-height:20px;font-size:14px}</style></head><body><main class="card"><div class="head"><div class="icon">⚙️</div><h1>Central do Operador</h1><p class="muted">Área exclusiva para administração das contas dos administradores.</p></div><form id="form"><label for="chave">Chave do operador</label><input id="chave" type="password" autocomplete="current-password" required><button class="primary">Acessar central</button><p id="erro" class="error"></p></form><a class="back" href="/">Voltar ao sistema</a></main><script>form.onsubmit=async e=>{e.preventDefault();erro.textContent='';const r=await fetch('/api/operador/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chave:chave.value})});const d=await r.json().catch(()=>({}));if(!r.ok){erro.textContent=d.mensagem||'Acesso negado.';return}location.href=d.destino||'/operador'};</script></body></html>
+<!DOCTYPE html>
+<html lang="pt-BR">
+ <head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width,initial-scale=1" name="viewport"/>
+  <title>
+   Central do Operador
+  </title>
+  <style>
+   * {
+    box-sizing:border-box
+}
+body {
+    margin:0;
+    min-height:100vh;
+    font-family:Inter,Segoe UI,Arial,sans-serif;
+    background:linear-gradient(135deg,#111827,#1f2937);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+    color:#111827
+}
+.card {
+    width:min(430px,100%);
+    background:#fff;
+    border-radius:20px;
+    padding:32px;
+    box-shadow:0 24px 60px rgba(0,0,0,.35)
+}
+.head {
+    text-align:center;
+    margin-bottom:24px
+}
+.icon {
+    width:66px;
+    height:66px;
+    border-radius:18px;
+    margin:0 auto 14px;
+    display:grid;
+    place-items:center;
+    background:#111827;
+    color:#fff;
+    font-size:30px
+}
+h1 {
+    margin:0 0 8px
+}
+.muted {
+    color:#6b7280;
+    line-height:1.5
+}
+label {
+    display:block;
+    font-size:14px;
+    font-weight:700;
+    margin-bottom:8px
+}
+input {
+    width:100%;
+    padding:13px 14px;
+    border:1px solid #d1d5db;
+    border-radius:10px;
+    font:inherit;
+    outline:0
+}
+input:focus {
+    border-color:#111827;
+    box-shadow:0 0 0 3px rgba(17,24,39,.12)
+}
+button,a {
+    width:100%;
+    display:flex;
+    justify-content:center;
+    text-decoration:none;
+    border:0;
+    border-radius:10px;
+    padding:13px;
+    font:inherit;
+    font-weight:700;
+    cursor:pointer
+}
+.primary {
+    background:#111827;
+    color:#fff;
+    margin-top:18px
+}
+.back {
+    background:#f3f4f6;
+    color:#374151;
+    margin-top:10px
+}
+.error {
+    color:#b91c1c;
+    min-height:20px;
+    font-size:14px
+}
+  </style>
+ </head>
+ <body>
+  <main class="card">
+   <div class="head">
+    <div class="icon">
+     ⚙️
+    </div>
+    <h1>
+     Central do Operador
+    </h1>
+    <p class="muted">
+     Área exclusiva para administração das contas dos administradores.
+    </p>
+   </div>
+   <form id="form">
+    <label for="chave">
+     Chave do operador
+    </label>
+    <input autocomplete="current-password" id="chave" required="" type="password"/>
+    <button class="primary">
+     Acessar central
+    </button>
+    <p class="error" id="erro">
+    </p>
+   </form>
+   <a class="back" href="/">
+    Voltar ao sistema
+   </a>
+  </main>
+  <script>
+   form.onsubmit=async e=>{e.preventDefault();erro.textContent='';const r=await fetch('/api/operador/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chave:chave.value})});const d=await r.json().catch(()=>({}));if(!r.ok){erro.textContent=d.mensagem||'Acesso negado.';return}location.href=d.destino||'/operador'};
+  </script>
+ </body>
+</html>
