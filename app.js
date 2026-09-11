@@ -35,7 +35,6 @@ const app = express();
 const PORT = 3000;
 const PRODUCAO = process.env.NODE_ENV === 'production';
 const SESSION_SECRET = process.env.SESSION_SECRET || 'troque-esta-chave-no-ambiente-de-producao';
-const BASE_API_KEY = process.env.BASE_API_KEY || '';
 const OPERATOR_SECRET = process.env.OPERATOR_SECRET || '';
 const OPERATOR_SALT = process.env.OPERATOR_SALT || 'ff480e86b329a506e7f63d7929a23511';
 const OPERATOR_HASH = process.env.OPERATOR_HASH || 'd79a4effacf26474a8aa9d5dc6e658d3b9aaa584f4160fc1b9e90a1a83e8c0be2febfa1285f540957c02f47602e3229d360bd474b5257a4fc411fa6ab67958ee';
@@ -400,21 +399,8 @@ async function salvarMedicao(dado, origem = 'bluetooth', loteId = null) {
   });
   return { id: resultado.id, luminosidade: valor, lat: latitude, lng: longitude, lote_id: loteId, timestamp };
 }
-async function exigirBaseOuAdmin(req, res, next) {
-  try {
-    const u = await carregarUsuarioSessao(req);
-    if (u && u.role === 'admin' && !u.trocar_senha) {
-      req.usuario = u;
-      return next();
-    }
-    const chave = req.get('x-base-key') || '';
-    if (BASE_API_KEY && chave === BASE_API_KEY) return next();
-    res.status(401).json({ mensagem: 'Envio não autorizado. Use uma sessão de administrador ou uma chave da base.' });
-  } catch (erro) {
-    res.status(500).json({ mensagem: 'Erro ao validar a origem dos dados.' });
-  }
-}
-app.post('/api/medicoes', exigirBaseOuAdmin, async (req, res) => {
+
+app.post('/api/medicoes', async (req, res) => {
   try {
     const medicao = await salvarMedicao(req.body, 'bluetooth');
     res.status(201).json({ mensagem: 'Medição recebida.', medicao });
@@ -423,21 +409,51 @@ app.post('/api/medicoes', exigirBaseOuAdmin, async (req, res) => {
     res.status(500).json({ mensagem: 'Erro ao salvar medição.' });
   }
 });
-app.post('/api/medicoes/lote', exigirBaseOuAdmin, async (req, res) => {
+app.post('/api/medicoes/lote', async (req, res) => {
   try {
     const medicoes = Array.isArray(req.body) ? req.body : req.body.medicoes;
-    if (!Array.isArray(medicoes) || medicoes.length === 0) return res.status(400).json({ mensagem: 'Envie uma lista de medições.' });
-    if (medicoes.length > 5000) return res.status(400).json({ mensagem: 'O lote ultrapassa o limite de 5000 medições.' });
-    const loteId = `LOTE-${Date.now()}`;
+
+    if (!Array.isArray(medicoes) || medicoes.length === 0) {
+      return res.status(400).json({
+        mensagem: 'Envie uma lista de medições.'
+      });
+    }
+
+    if (medicoes.length > 5000) {
+      return res.status(400).json({
+        mensagem: 'O lote ultrapassa o limite de 5000 medições.'
+      });
+    }
+
+    const loteId = String(
+      req.body.loteId || `LOTE-${Date.now()}`
+    );
+
     await executarTransacao(async () => {
       for (const medicao of medicoes) {
-        await salvarMedicao(medicao, 'bluetooth-lote', loteId);
+        await salvarMedicao(
+          medicao,
+          'bluetooth-lote',
+          loteId
+        );
       }
     });
-    res.status(201).json({ mensagem: 'Lote recebido e registrado.', loteId, quantidade: medicoes.length });
+
+    res.status(201).json({
+      mensagem: 'Lote recebido e registrado.',
+      loteId,
+      quantidade: medicoes.length
+    });
   } catch (erro) {
-    if (erro.message === 'DADOS_INVALIDOS') return res.status(400).json({ mensagem: 'Uma ou mais medições do lote são inválidas.' });
-    res.status(500).json({ mensagem: 'Erro ao registrar lote de medições.' });
+    if (erro.message === 'DADOS_INVALIDOS') {
+      return res.status(400).json({
+        mensagem: 'Uma ou mais medições do lote são inválidas.'
+      });
+    }
+
+    res.status(500).json({
+      mensagem: 'Erro ao registrar lote de medições.'
+    });
   }
 });
 app.get('/api/configuracao/teste', exigirAdmin, async (req, res) => {
