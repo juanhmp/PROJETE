@@ -26,19 +26,28 @@ const {
   listarMedicoes,
   buscarAreasMapaCalor,
   inserirMedicao,
+  excluirTodasMedicoes,
+  obterUltimoRecebimentoMedicao,
+  registrarUltimoRecebimentoMedicao,
   executarTransacao,
-  obterModoTeste,
-  definirModoTeste,
   obterDashboard
 } = banco;
 const app = express();
 const PORT = 3000;
+// Se nenhuma medição chegar durante este período, a próxima inicia
+// uma nova coleta e substitui todas as medições da coleta anterior.
+const TEMPO_NOVA_COLETA_MS = 5 * 60 * 1000;
 const PRODUCAO = process.env.NODE_ENV === 'production';
-const SESSION_SECRET = process.env.SESSION_SECRET || 'troque-esta-chave-no-ambiente-de-producao';
-const OPERATOR_SECRET = process.env.OPERATOR_SECRET || '';
-const OPERATOR_SALT = process.env.OPERATOR_SALT || 'ff480e86b329a506e7f63d7929a23511';
-const OPERATOR_HASH = process.env.OPERATOR_HASH || 'd79a4effacf26474a8aa9d5dc6e658d3b9aaa584f4160fc1b9e90a1a83e8c0be2febfa1285f540957c02f47602e3229d360bd474b5257a4fc411fa6ab67958ee';
+const SESSION_SECRET = process.env.SESSION_SECRET;
+const OPERATOR_SECRET = process.env.OPERATOR_SECRET;
 const PERMITIR_OPERADOR_REMOTO = process.env.ALLOW_OPERATOR_REMOTE === 'true';
+
+if (!SESSION_SECRET || !OPERATOR_SECRET) {
+  throw new Error(
+    'Configure SESSION_SECRET e OPERATOR_SECRET nas variáveis de ambiente antes de iniciar o servidor.'
+  );
+}
+
 app.disable('x-powered-by');
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(express.json({ limit: '2mb' }));
@@ -55,9 +64,6 @@ app.use(session({
     maxAge: 8 * 60 * 60 * 1000
   }
 }));
-if (!process.env.SESSION_SECRET) {
-  console.warn('AVISO: usando SESSION_SECRET de desenvolvimento. Defina SESSION_SECRET antes de publicar o sistema.');
-}
 function usuarioPublico(u) {
   return {
     id: u.id,
@@ -95,10 +101,7 @@ function segredoCorresponde(recebido, esperado) {
   return crypto.timingSafeEqual(a, b);
 }
 function senhaOperadorCorresponde(recebida) {
-  if (OPERATOR_SECRET) return segredoCorresponde(recebida, OPERATOR_SECRET);
-  const calculado = crypto.scryptSync(String(recebida || ''), OPERATOR_SALT, 64);
-  const esperado = Buffer.from(OPERATOR_HASH, 'hex');
-  return calculado.length === esperado.length && crypto.timingSafeEqual(calculado, esperado);
+  return segredoCorresponde(recebida, OPERATOR_SECRET);
 }
 function exigirMaquinaOperador(req, res, next) {
   if (PERMITIR_OPERADOR_REMOTO) return next();
@@ -400,10 +403,33 @@ async function salvarMedicao(dado, origem = 'bluetooth', loteId = null) {
   return { id: resultado.id, luminosidade: valor, lat: latitude, lng: longitude, lote_id: loteId, timestamp };
 }
 
+async function prepararRecebimentoMedicoes(recebidoEm) {
+  const registro = await obterUltimoRecebimentoMedicao();
+  const ultimoRecebimento = registro ? Date.parse(registro.valor) : NaN;
+  const agora = Date.parse(recebidoEm);
+  const ficouSemReceber = Number.isFinite(ultimoRecebimento)
+    && (agora - ultimoRecebimento >= TEMPO_NOVA_COLETA_MS);
+
+  if (ficouSemReceber) {
+    await excluirTodasMedicoes();
+  }
+
+  return ficouSemReceber;
+}
+
 app.post('/api/medicoes', async (req, res) => {
   try {
-    const medicao = await salvarMedicao(req.body, 'bluetooth');
-    res.status(201).json({ mensagem: 'Medição recebida.', medicao });
+    const recebidoEm = new Date().toISOString();
+    let medicao;
+    let novaColeta = false;
+
+    await executarTransacao(async () => {
+      novaColeta = await prepararRecebimentoMedicoes(recebidoEm);
+      medicao = await salvarMedicao(req.body, 'bluetooth');
+      await registrarUltimoRecebimentoMedicao(recebidoEm);
+    });
+
+    res.status(201).json({ mensagem: 'Medição recebida.', novaColeta, medicao });
   } catch (erro) {
     if (erro.message === 'DADOS_INVALIDOS') return res.status(400).json({ mensagem: 'Medição inválida.' });
     res.status(500).json({ mensagem: 'Erro ao salvar medição.' });
@@ -429,7 +455,11 @@ app.post('/api/medicoes/lote', async (req, res) => {
       req.body.loteId || `LOTE-${Date.now()}`
     );
 
+    const recebidoEm = new Date().toISOString();
+    let novaColeta = false;
+
     await executarTransacao(async () => {
+      novaColeta = await prepararRecebimentoMedicoes(recebidoEm);
       for (const medicao of medicoes) {
         await salvarMedicao(
           medicao,
@@ -437,11 +467,13 @@ app.post('/api/medicoes/lote', async (req, res) => {
           loteId
         );
       }
+      await registrarUltimoRecebimentoMedicao(recebidoEm);
     });
 
     res.status(201).json({
       mensagem: 'Lote recebido e registrado.',
       loteId,
+      novaColeta,
       quantidade: medicoes.length
     });
   } catch (erro) {
@@ -454,105 +486,6 @@ app.post('/api/medicoes/lote', async (req, res) => {
     res.status(500).json({
       mensagem: 'Erro ao registrar lote de medições.'
     });
-  }
-});
-app.get('/api/configuracao/teste', exigirAdmin, async (req, res) => {
-  try {
-    const config = await obterModoTeste();
-    res.json({ ativo: config && config.valor === '1' });
-  } catch (erro) {
-    res.status(500).json({ mensagem: 'Erro ao consultar modo de teste.' });
-  }
-});
-app.put('/api/configuracao/teste', exigirAdmin, async (req, res) => {
-  try {
-    const ativo = Boolean(req.body.ativo);
-    await definirModoTeste(ativo);
-    res.json({ ativo, mensagem: ativo ? 'Modo de teste ativado.' : 'Modo de teste desativado.' });
-  } catch (erro) {
-    res.status(500).json({ mensagem: 'Erro ao alterar modo de teste.' });
-  }
-});
-// A simulação representa um caminhão que percorreu a cidade e descarregou
-// o cartão na base. Os pontos sintéticos seguem vários corredores/percursos,
-// em vez de preencherem um retângulo perfeito. Isso evita um heatmap artificial.
-const areaTeste = {
-  centroLat: -22.2520,
-  centroLng: -45.7040,
-  raioLat: 0.0260,
-  raioLng: 0.0270
-};
-function coordenadaDaArea(x, y) {
-  return {
-    lat: areaTeste.centroLat + y * areaTeste.raioLat,
-    lng: areaTeste.centroLng + x * areaTeste.raioLng
-  };
-}
-function luminosidadeSimulada(lat, lng) {
-  const x = (lng - areaTeste.centroLng) / areaTeste.raioLng;
-  const y = (lat - areaTeste.centroLat) / areaTeste.raioLat;
-  // Cria regiões amplas com níveis diferentes, para o mapa ter transições
-  // de iluminação e não simplesmente ficar todo vermelho.
-  const zona1 = 25 * Math.exp(-(((x + 0.42) ** 2) / 0.10 + ((y - 0.18) ** 2) / 0.18));
-  const zona2 = -24 * Math.exp(-(((x - 0.35) ** 2) / 0.12 + ((y + 0.28) ** 2) / 0.14));
-  const zona3 = 17 * Math.exp(-(((x - 0.12) ** 2) / 0.20 + ((y - 0.48) ** 2) / 0.10));
-  const variacao = Math.sin(x * 5.2 + y * 2.0) * 8 + Math.cos(y * 5.5) * 6;
-  const ruido = (Math.random() - 0.5) * 7;
-  return Math.round(Math.max(10, Math.min(96, 57 + zona1 + zona2 + zona3 + variacao + ruido)));
-}
-function adicionarTrecho(medicoes, x1, y1, x2, y2, quantidade, inicio, intervalo) {
-  for (let i = 0; i < quantidade; i++) {
-    const t = quantidade === 1 ? 0 : i / (quantidade - 1);
-    const x = x1 + (x2 - x1) * t + (Math.random() - 0.5) * 0.009;
-    const y = y1 + (y2 - y1) * t + (Math.random() - 0.5) * 0.009;
-    // Mantém a simulação dentro de uma área urbana arredondada/irregular.
-    if ((x * x) + (y * y) > 0.98) continue;
-    const pos = coordenadaDaArea(x, y);
-    medicoes.push({
-      luminosidade: luminosidadeSimulada(pos.lat, pos.lng),
-      lat: pos.lat,
-      lng: pos.lng,
-      local: 'Santa Rita do Sapucaí - simulação',
-      timestamp: new Date(inicio + medicoes.length * intervalo).toISOString()
-    });
-  }
-}
-function montarLoteTeste() {
-  const medicoes = [];
-  const inicio = Date.now() - 2 * 60 * 60 * 1000;
-  const intervalo = 3200;
-  // Percursos aproximadamente horizontais pela cidade.
-  for (let faixa = -0.78; faixa <= 0.78; faixa += 0.13) {
-    const limiteX = Math.sqrt(Math.max(0, 0.92 - faixa * faixa));
-    const ondulacao = Math.sin(faixa * 8) * 0.045;
-    adicionarTrecho(medicoes, -limiteX, faixa, limiteX, faixa + ondulacao, 48, inicio, intervalo);
-  }
-  // Percursos aproximadamente verticais, cruzando os anteriores como uma malha viária.
-  for (let faixa = -0.72; faixa <= 0.72; faixa += 0.16) {
-    const limiteY = Math.sqrt(Math.max(0, 0.90 - faixa * faixa));
-    const deslocamento = Math.cos(faixa * 7) * 0.04;
-    adicionarTrecho(medicoes, faixa, -limiteY, faixa + deslocamento, limiteY, 44, inicio, intervalo);
-  }
-  // Alguns eixos diagonais quebram o padrão de grade e deixam o resultado mais orgânico.
-  adicionarTrecho(medicoes, -0.82, -0.30, 0.74, 0.56, 62, inicio, intervalo);
-  adicionarTrecho(medicoes, -0.70, 0.66, 0.68, -0.52, 62, inicio, intervalo);
-  adicionarTrecho(medicoes, -0.88, 0.14, 0.82, -0.04, 68, inicio, intervalo);
-  return medicoes;
-}
-app.post('/api/teste/enviar-lote', exigirAdmin, async (req, res) => {
-  try {
-    const config = await obterModoTeste();
-    if (!config || config.valor !== '1') return res.status(400).json({ mensagem: 'Ative o modo de teste primeiro.' });
-    const lote = montarLoteTeste();
-    const loteId = `TESTE-${Date.now()}`;
-    await executarTransacao(async () => {
-      for (const medicao of lote) {
-        await salvarMedicao(medicao, 'teste-cartao', loteId);
-      }
-    });
-    res.status(201).json({ mensagem: 'Caminhão simulado chegou à base e enviou o conteúdo do cartão.', loteId, quantidade: lote.length });
-  } catch (erro) {
-    res.status(500).json({ mensagem: 'Erro ao simular envio do cartão.' });
   }
 });
 app.get('/api/dashboard', exigirAdmin, async (req, res) => {

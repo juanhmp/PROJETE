@@ -247,13 +247,12 @@ Esse módulo é independente da coleta automática realizada pelo caminhão.
 
 ---
 
-# 🧪 Modo de teste
+# 🔄 Renovação automática das medições
 
-O sistema possui um modo de teste utilizado durante o desenvolvimento.
-
-Quando habilitado pelo administrador, é possível simular a chegada do caminhão e enviar um lote de medições fictícias. Isso permite testar o banco de dados, processamento e mapa de calor mesmo quando o dispositivo físico não está conectado.
-
-Os dados simulados são utilizados apenas para desenvolvimento e demonstração. As coordenadas geradas não representam necessariamente ruas reais.
+O sistema recebe somente as medições reais enviadas pela base. Enquanto os
+dados chegam continuamente, eles permanecem na mesma coleta. Depois de cinco
+minutos sem receber informações, a próxima medição inicia uma nova coleta e
+substitui automaticamente as medições anteriores.
 
 ---
 
@@ -271,6 +270,40 @@ Entre as informações armazenadas estão:
 - configurações do sistema.
 
 O arquivo do banco é criado localmente pelo backend durante a execução.
+
+---
+
+# 🔐 Configuração das chaves no Windows
+
+As chaves de sessão e da Central do Operador não ficam salvas no código nem
+são enviadas ao GitHub. Antes de iniciar o servidor pela primeira vez, abra o
+PowerShell e execute:
+
+```powershell
+setx SESSION_SECRET "COLOQUE_AQUI_UMA_CHAVE_GRANDE_E_ALEATORIA"
+setx OPERATOR_SECRET "COLOQUE_AQUI_A_SENHA_DESEJADA_PARA_O_OPERADOR"
+```
+
+Use valores escolhidos por você e não publique esses valores. Depois, feche o
+PowerShell e abra-o novamente para que o Windows carregue as variáveis. A
+partir desse momento, `npm start` lê as chaves diretamente das variáveis de
+ambiente da conta do Windows.
+
+Para gerar uma chave de sessão aleatória no PowerShell, use:
+
+```powershell
+$chave = [guid]::NewGuid().ToString('N') + [guid]::NewGuid().ToString('N')
+setx SESSION_SECRET $chave
+```
+
+Somente quando o banco estiver vazio e ainda não existir uma conta
+administrativa, configure também a senha temporária do primeiro administrador:
+
+```powershell
+setx INITIAL_ADMIN_PASSWORD "COLOQUE_AQUI_UMA_SENHA_TEMPORARIA"
+```
+
+Essa conta será obrigada a trocar a senha no primeiro acesso.
 
 ---
 

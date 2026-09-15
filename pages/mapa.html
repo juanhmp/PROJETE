@@ -684,7 +684,7 @@ async function carregar(){
     const totalLeituras=validos.reduce((s,a)=>s+(Number(a.quantidade)||0),0);
     resumoMapa.textContent=`Mapa formado por ${totalLeituras} leituras do último envio, agrupadas em ${validos.length} pequenas áreas. As leituras individuais não são exibidas.`;
   }else{
-    resumoMapa.textContent='Ainda não há dados para formar o mapa de calor. No modo de teste, simule a chegada do caminhão à base.';
+    resumoMapa.textContent='Ainda não há medições reais para formar o mapa de calor.';
   }
 }
 

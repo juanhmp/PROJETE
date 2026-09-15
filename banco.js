@@ -84,18 +84,28 @@ async function iniciarBanco() {
   await garantirColuna('ocorrencias', 'criado_por', 'INTEGER');
   await garantirColuna('medicoes', 'lote_id', 'TEXT');
 
-  await run(`INSERT OR IGNORE INTO configuracoes (chave, valor) VALUES ('modo_teste', '0')`);
+  // O modo de simulação não é mais usado. Remove a configuração de
+  // instalações antigas sem alterar usuários, ocorrências ou medições reais.
+  await run("DELETE FROM configuracoes WHERE chave = 'modo_teste'");
 
   const total = await get('SELECT COUNT(*) AS total FROM usuarios');
 
   if (!total || total.total === 0) {
+    const senhaInicial = process.env.INITIAL_ADMIN_PASSWORD;
+
+    if (!senhaInicial || senhaInicial.length < 8) {
+      throw new Error(
+        'Banco sem administrador. Configure INITIAL_ADMIN_PASSWORD com pelo menos 8 caracteres.'
+      );
+    }
+
     await run(
       `INSERT INTO usuarios (username, password, role, nome, ativo, trocar_senha, criado_em)
        VALUES (?, ?, 'admin', ?, 1, 1, ?)`,
-      ['admin', bcrypt.hashSync('Admin@123', 12), 'Administrador', new Date().toISOString()]
+      ['admin', bcrypt.hashSync(senhaInicial, 12), 'Administrador', new Date().toISOString()]
     );
 
-    console.log('Primeiro acesso: admin / Admin@123 (troca de senha obrigatória)');
+    console.log('Administrador inicial criado. A troca de senha será exigida no primeiro acesso.');
   } else {
     await run(
       'UPDATE usuarios SET criado_em = COALESCE(criado_em, ?) WHERE criado_em IS NULL',
@@ -264,6 +274,25 @@ function inserirMedicao({
   );
 }
 
+function excluirTodasMedicoes() {
+  return run('DELETE FROM medicoes');
+}
+
+function obterUltimoRecebimentoMedicao() {
+  return get(
+    "SELECT valor FROM configuracoes WHERE chave = 'ultimo_recebimento_medicao'"
+  );
+}
+
+function registrarUltimoRecebimentoMedicao(dataIso) {
+  return run(
+    `INSERT INTO configuracoes (chave, valor)
+     VALUES ('ultimo_recebimento_medicao', ?)
+     ON CONFLICT(chave) DO UPDATE SET valor = excluded.valor`,
+    [dataIso]
+  );
+}
+
 async function executarTransacao(callback) {
   await run('BEGIN TRANSACTION');
 
@@ -277,28 +306,13 @@ async function executarTransacao(callback) {
   }
 }
 
-function obterModoTeste() {
-  return get(
-    "SELECT valor FROM configuracoes WHERE chave = 'modo_teste'"
-  );
-}
-
-function definirModoTeste(ativo) {
-  return run(
-    "UPDATE configuracoes SET valor = ? WHERE chave = 'modo_teste'",
-    [ativo ? '1' : '0']
-  );
-}
-
 async function obterDashboard() {
   const ocorrencias = await get('SELECT COUNT(*) AS total FROM ocorrencias');
   const medicoes = await get('SELECT COUNT(*) AS total FROM medicoes');
-  const config = await obterModoTeste();
 
   return {
     totalOcorrencias: ocorrencias.total,
-    totalMedicoes: medicoes.total,
-    modoTeste: Boolean(config && config.valor === '1')
+    totalMedicoes: medicoes.total
   };
 }
 
@@ -322,8 +336,9 @@ module.exports = {
   listarMedicoes,
   buscarAreasMapaCalor,
   inserirMedicao,
+  excluirTodasMedicoes,
+  obterUltimoRecebimentoMedicao,
+  registrarUltimoRecebimentoMedicao,
   executarTransacao,
-  obterModoTeste,
-  definirModoTeste,
   obterDashboard
 };

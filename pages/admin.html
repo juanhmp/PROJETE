@@ -590,41 +590,13 @@ textarea {
      </p>
     </div>
    </div>
-   <div style="height:22px">
-   </div>
-   <section class="status-box">
-    <div class="status-row">
-     <div>
-      <h2 style="margin:0 0 6px">
-       Modo de teste
-      </h2>
-      <p class="muted" style="margin:0">
-       Simula o caminhão chegando à base e enviando um lote de medições armazenadas no cartão.
-      </p>
-      <p class="mini" id="testInfo">
-      </p>
-     </div>
-     <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-      <button class="btn btn-gray" id="simularBtn">
-       Simular chegada do caminhão
-      </button>
-      <label class="switch">
-       <input id="testToggle" type="checkbox"/>
-       <span class="slider">
-       </span>
-      </label>
-     </div>
-    </div>
-   </section>
   </main>
  </body>
  <script>
   async function logout(){await fetch('/api/logout',{method:'POST'});location.href='/login'}
 async function apiFetch(url,opcoes={}){const r=await fetch(url,opcoes);if(r.status===401){location.href='/login';throw new Error('Sessão expirada')}return r}
 logoutBtn.onclick=logout;
-async function carregar(){const r=await apiFetch('/api/dashboard');const d=await r.json();if(!r.ok)return;totalMedicoes.textContent=d.totalMedicoes;totalOcorrencias.textContent=d.totalOcorrencias;testToggle.checked=d.modoTeste;testInfo.textContent=d.modoTeste?'Ativo: use o botão para simular o envio do cartão.':'Desativado: o sistema aguarda o lote real enviado pela base.'}
-testToggle.onchange=async()=>{await apiFetch('/api/configuracao/teste',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({ativo:testToggle.checked})});carregar()};
-simularBtn.onclick=async()=>{const r=await apiFetch('/api/teste/enviar-lote',{method:'POST'});const d=await r.json();alert(r.ok?`${d.mensagem} ${d.quantidade} leituras recebidas.`:d.mensagem);carregar()};
+async function carregar(){const r=await apiFetch('/api/dashboard');const d=await r.json();if(!r.ok)return;totalMedicoes.textContent=d.totalMedicoes;totalOcorrencias.textContent=d.totalOcorrencias}
 carregar();
  </script>
 </html>
