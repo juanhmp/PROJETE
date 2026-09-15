@@ -84,9 +84,23 @@ async function iniciarBanco() {
   await garantirColuna('ocorrencias', 'criado_por', 'INTEGER');
   await garantirColuna('medicoes', 'lote_id', 'TEXT');
 
-  // O modo de simulação não é mais usado. Remove a configuração de
-  // instalações antigas sem alterar usuários, ocorrências ou medições reais.
+  // O modo de simulação não é mais usado.
   await run("DELETE FROM configuracoes WHERE chave = 'modo_teste'");
+
+  // Limpeza executada uma única vez ao atualizar uma instalação antiga.
+  // Mantém contas e ocorrências, removendo apenas as medições anteriores.
+  const limpezaInicial = await get(
+    "SELECT valor FROM configuracoes WHERE chave = 'limpeza_medicoes_v1'"
+  );
+
+  if (!limpezaInicial) {
+    await run('DELETE FROM medicoes');
+    await run("DELETE FROM configuracoes WHERE chave = 'ultimo_recebimento_medicao'");
+    await run(
+      "INSERT INTO configuracoes (chave, valor) VALUES ('limpeza_medicoes_v1', ?)",
+      [new Date().toISOString()]
+    );
+  }
 
   const total = await get('SELECT COUNT(*) AS total FROM usuarios');
 
