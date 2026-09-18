@@ -17,6 +17,16 @@ class Program
         0xAA, 0x55, 0x01, 0xFF
     };
 
+    // CORREÇÃO: HttpClient único, reaproveitado por todo o programa.
+    // Criar um HttpClient novo a cada medição (o código original fazia
+    // "using HttpClient cliente = new HttpClient()" dentro de EnviarMedicao)
+    // esgota as portas TCP disponíveis depois de rodar por um tempo,
+    // já que o STM32 manda uma medição de Lux por segundo.
+    static readonly HttpClient cliente = new HttpClient
+    {
+        Timeout = TimeSpan.FromSeconds(10)
+    };
+
     static double ultimaLatitude = 0;
     static double ultimaLongitude = 0;
     static string? ultimoTimestamp = null;
@@ -51,8 +61,10 @@ class Program
                 Console.WriteLine();
 
                 Thread.Sleep(5000);
-                continue;
+              //  continue;
             }
+            else
+            {
 
             Console.WriteLine();
             Console.WriteLine($"LightSentinel encontrado em {porta.PortName}");
@@ -72,7 +84,7 @@ class Program
                     $"Comunicação interrompida: {erro.Message}"
                 );
             }
-
+            
             try
             {
                 if (porta.IsOpen)
@@ -83,6 +95,7 @@ class Program
             }
 
             porta.Dispose();
+            }
 
             gpsValido = false;
 
@@ -90,6 +103,7 @@ class Program
             Console.WriteLine(
                 "Procurando o LightSentinel novamente..."
             );
+
             Console.WriteLine();
 
             Thread.Sleep(3000);
@@ -109,7 +123,35 @@ class Program
         Console.WriteLine("Procurando LightSentinel...");
         Console.WriteLine();
 
+        // Mantém a detecção automática das portas.
+        // Apenas dá prioridade à COM7, que no computador atual
+        // aparece como "HC-05 SPP Dev".
+        string[] portasOrdenadas = new string[portas.Length];
+        int indicePortas = 0;
+
+        // Primeiro testa a COM7, se ela existir.
         foreach (string nome in portas)
+        {
+            Console.WriteLine("Porta="+nome);
+            if (nome.Equals("COM7", StringComparison.OrdinalIgnoreCase))
+            {
+                portasOrdenadas[indicePortas] = nome;
+                indicePortas++;
+                break;
+            }
+        }
+
+        // Depois testa todas as outras portas automaticamente.
+        foreach (string nome in portas)
+        {
+            if (!nome.Equals("COM7", StringComparison.OrdinalIgnoreCase))
+            {
+                portasOrdenadas[indicePortas] = nome;
+                indicePortas++;
+            }
+        }
+
+        foreach (string nome in portasOrdenadas)
         {
             Console.Write($"{nome} -> ");
 
@@ -129,6 +171,8 @@ class Program
                 porta.WriteTimeout = 1500;
                 porta.NewLine = "\n";
 
+                porta.Close();
+                Thread.Sleep(300);
                 porta.Open();
 
                 Thread.Sleep(300);
@@ -143,6 +187,7 @@ class Program
                  * O STM deverá responder:
                  * AA 55 01 FF
                  */
+
                 porta.Write(
                     ASSINATURA,
                     0,
@@ -174,6 +219,17 @@ class Program
             catch (UnauthorizedAccessException)
             {
                 Console.WriteLine("porta ocupada.");
+
+                try
+                {
+                    if (porta != null && porta.IsOpen)
+                        porta.Close();
+                }
+                catch
+                {
+                    Console.WriteLine ("erro catch");
+                }
+
                 porta?.Dispose();
             }
             catch (Exception)
@@ -490,12 +546,8 @@ class Program
         Medicao medicao
     )
     {
-        using HttpClient cliente =
-            new HttpClient();
-
-        cliente.Timeout =
-            TimeSpan.FromSeconds(10);
-
+        // CORREÇÃO: reaproveita o HttpClient estático em vez de criar
+        // (e descartar) um novo a cada chamada.
         try
         {
             HttpResponseMessage resposta =
