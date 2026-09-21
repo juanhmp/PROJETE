@@ -1,0 +1,18 @@
+{
+  "name": "loginanddashboardsite-node",
+  "version": "3.0.0",
+  "description": "Sistema de iluminação pública com Node, Express, SQLite, sessões seguras e gerenciamento de usuários",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "node app.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "express": "^5.1.0",
+    "sqlite3": "^5.1.7",
+    "express-session": "^1.18.1",
+    "express-rate-limit": "^8.1.0",
+    "helmet": "^8.1.0"
+  }
+}
