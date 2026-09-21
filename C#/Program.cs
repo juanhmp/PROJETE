@@ -27,7 +27,7 @@ class Program
     // HttpClient único, reaproveitado por todo o programa
     static readonly HttpClient cliente = new HttpClient
     {
-        Timeout = TimeSpan.FromSeconds(5)
+        Timeout = TimeSpan.FromSeconds(10)
     };
 
     static double ultimaLatitude = 0;
@@ -183,7 +183,7 @@ class Program
                                 }
                                 else if (linha.StartsWith("Lux:"))
                                 {
-                                    ProcessarLux(linha);
+                                    await ProcessarLux(linha);
                                 }
                             }
                         }
@@ -307,7 +307,7 @@ class Program
         }
     }
 
-    static void ProcessarLux(string linha)
+    static async Task ProcessarLux(string linha)
     {
         try
         {
@@ -355,6 +355,8 @@ class Program
                 $"Medição -> Lux: {lux:F2} | " +
                 $"Escala: {luminosidade:F2}"
             );
+
+            await EnviarMedicao(medicao);
         }
         catch (Exception erro)
         {
