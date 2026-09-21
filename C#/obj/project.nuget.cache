@@ -1,9 +1,11 @@
 {
   "version": 2,
-  "dgSpecHash": "0rSFiJ3KHI4=",
+  "dgSpecHash": "unY1yiflCWQ=",
   "success": true,
   "projectFilePath": "C:\\Users\\Mariana\\OneDrive\\Desktop\\ETE_2K26\\Projete_3403\\PROJETE\\C#\\c#.csproj",
   "expectedPackageFiles": [
+    "C:\\Users\\Mariana\\.nuget\\packages\\inthehand.net.bluetooth\\4.2.5\\inthehand.net.bluetooth.4.2.5.nupkg.sha512",
+    "C:\\Users\\Mariana\\.nuget\\packages\\linux.bluetooth\\5.67.1\\linux.bluetooth.5.67.1.nupkg.sha512",
     "C:\\Users\\Mariana\\.nuget\\packages\\runtime.android-arm.runtime.native.system.io.ports\\10.0.12\\runtime.android-arm.runtime.native.system.io.ports.10.0.12.nupkg.sha512",
     "C:\\Users\\Mariana\\.nuget\\packages\\runtime.android-arm64.runtime.native.system.io.ports\\10.0.12\\runtime.android-arm64.runtime.native.system.io.ports.10.0.12.nupkg.sha512",
     "C:\\Users\\Mariana\\.nuget\\packages\\runtime.android-x64.runtime.native.system.io.ports\\10.0.12\\runtime.android-x64.runtime.native.system.io.ports.10.0.12.nupkg.sha512",
@@ -21,7 +23,8 @@
     "C:\\Users\\Mariana\\.nuget\\packages\\runtime.native.system.io.ports\\10.0.12\\runtime.native.system.io.ports.10.0.12.nupkg.sha512",
     "C:\\Users\\Mariana\\.nuget\\packages\\runtime.osx-arm64.runtime.native.system.io.ports\\10.0.12\\runtime.osx-arm64.runtime.native.system.io.ports.10.0.12.nupkg.sha512",
     "C:\\Users\\Mariana\\.nuget\\packages\\runtime.osx-x64.runtime.native.system.io.ports\\10.0.12\\runtime.osx-x64.runtime.native.system.io.ports.10.0.12.nupkg.sha512",
-    "C:\\Users\\Mariana\\.nuget\\packages\\system.io.ports\\10.0.12\\system.io.ports.10.0.12.nupkg.sha512"
+    "C:\\Users\\Mariana\\.nuget\\packages\\system.io.ports\\10.0.12\\system.io.ports.10.0.12.nupkg.sha512",
+    "C:\\Users\\Mariana\\.nuget\\packages\\tmds.dbus\\0.95.1\\tmds.dbus.0.95.1.nupkg.sha512"
   ],
   "logs": []
 }

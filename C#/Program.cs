@@ -1,30 +1,33 @@
 ﻿using System;
 using System.Globalization;
-using System.IO.Ports;
+using System.IO;
 using System.Net.Http;
 using System.Net.Http.Json;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using InTheHand.Net;
+using InTheHand.Net.Bluetooth;
+using InTheHand.Net.Sockets;
+using System.Net.Sockets;
 
 class Program
 {
-    const int BAUD_RATE = 9600;
     const string URL_SERVIDOR = "http://localhost:3000";
+
+    // Endereço MAC do HC-05 (00:21:13:00:3a:1e)
+    static readonly BluetoothAddress ENDERECO_HC05 = BluetoothAddress.Parse("002113003A1E");
 
     // Assinatura hexadecimal do LightSentinel
     static readonly byte[] ASSINATURA = {
         0xAA, 0x55, 0x01, 0xFF
     };
 
-    // CORREÇÃO: HttpClient único, reaproveitado por todo o programa.
-    // Criar um HttpClient novo a cada medição (o código original fazia
-    // "using HttpClient cliente = new HttpClient()" dentro de EnviarMedicao)
-    // esgota as portas TCP disponíveis depois de rodar por um tempo,
-    // já que o STM32 manda uma medição de Lux por segundo.
+    // HttpClient único, reaproveitado por todo o programa
     static readonly HttpClient cliente = new HttpClient
     {
-        Timeout = TimeSpan.FromSeconds(10)
+        Timeout = TimeSpan.FromSeconds(5)
     };
 
     static double ultimaLatitude = 0;
@@ -49,276 +52,160 @@ class Program
         Console.WriteLine("========================================");
         Console.WriteLine();
 
+        Guid servicoSpp = BluetoothService.SerialPort;
+        BluetoothEndPoint endPoint = new BluetoothEndPoint(ENDERECO_HC05, servicoSpp);
+
         while (true)
         {
-            SerialPort? porta = ProcurarLightSentinel();
+            BluetoothClient btClient = new BluetoothClient();
 
-            if (porta == null)
-            {
-                Console.WriteLine();
-                Console.WriteLine("LightSentinel não encontrado.");
-                Console.WriteLine("Tentando novamente em 5 segundos...");
-                Console.WriteLine();
-
-                Thread.Sleep(5000);
-              //  continue;
-            }
-            else
-            {
-
-            Console.WriteLine();
-            Console.WriteLine($"LightSentinel encontrado em {porta.PortName}");
-            Console.WriteLine($"Velocidade: {BAUD_RATE} baud");
-            Console.WriteLine();
-            Console.WriteLine("Recebendo dados...");
-            Console.WriteLine();
+            Console.WriteLine("Procurando LightSentinel via Bluetooth (32feet.NET)...");
 
             try
             {
-                await ReceberDados(porta);
+                btClient.Connect(endPoint);
+                Stream stream = btClient.GetStream();
+
+                Console.WriteLine();
+                Console.WriteLine($"LightSentinel encontrado no endereço {ENDERECO_HC05}");
+                Console.WriteLine("Enviando assinatura de verificação...");
+
+                // Envia a assinatura
+                stream.Write(ASSINATURA, 0, ASSINATURA.Length);
+                stream.Flush();
+
+                if (EsperarAssinatura(stream, 1500))
+                {
+                    Console.WriteLine("LightSentinel verificado com sucesso!");
+                    Console.WriteLine("Recebendo dados...");
+                    Console.WriteLine();
+
+                    await ReceberDados(stream, btClient);
+                }
+                else
+                {
+                    Console.WriteLine("Assinatura não corresponde.");
+                }
             }
             catch (Exception erro)
             {
                 Console.WriteLine();
-                Console.WriteLine(
-                    $"Comunicação interrompida: {erro.Message}"
-                );
+                Console.WriteLine($"Comunicação interrompida: {erro.Message}");
             }
-            
-            try
+            finally
             {
-                if (porta.IsOpen)
-                    porta.Close();
-            }
-            catch
-            {
-            }
-
-            porta.Dispose();
+                btClient.Close();
+                btClient.Dispose();
             }
 
             gpsValido = false;
 
             Console.WriteLine();
-            Console.WriteLine(
-                "Procurando o LightSentinel novamente..."
-            );
-
+            Console.WriteLine("Procurando o LightSentinel novamente em 2 segundos...");
             Console.WriteLine();
 
-            Thread.Sleep(3000);
+            Thread.Sleep(2000);
         }
     }
 
-    static SerialPort? ProcurarLightSentinel()
-    {
-        string[] portas = SerialPort.GetPortNames();
-
-        if (portas.Length == 0)
-        {
-            Console.WriteLine("Nenhuma porta COM encontrada.");
-            return null;
-        }
-
-        Console.WriteLine("Procurando LightSentinel...");
-        Console.WriteLine();
-
-        // Mantém a detecção automática das portas.
-        // Apenas dá prioridade à COM7, que no computador atual
-        // aparece como "HC-05 SPP Dev".
-        string[] portasOrdenadas = new string[portas.Length];
-        int indicePortas = 0;
-
-        // Primeiro testa a COM7, se ela existir.
-        foreach (string nome in portas)
-        {
-            Console.WriteLine("Porta="+nome);
-            if (nome.Equals("COM7", StringComparison.OrdinalIgnoreCase))
-            {
-                portasOrdenadas[indicePortas] = nome;
-                indicePortas++;
-                break;
-            }
-        }
-
-        // Depois testa todas as outras portas automaticamente.
-        foreach (string nome in portas)
-        {
-            if (!nome.Equals("COM7", StringComparison.OrdinalIgnoreCase))
-            {
-                portasOrdenadas[indicePortas] = nome;
-                indicePortas++;
-            }
-        }
-
-        foreach (string nome in portasOrdenadas)
-        {
-            Console.Write($"{nome} -> ");
-
-            SerialPort? porta = null;
-
-            try
-            {
-                porta = new SerialPort(
-                    nome,
-                    BAUD_RATE,
-                    Parity.None,
-                    8,
-                    StopBits.One
-                );
-
-                porta.ReadTimeout = 1500;
-                porta.WriteTimeout = 1500;
-                porta.NewLine = "\n";
-
-                porta.Close();
-                Thread.Sleep(300);
-                porta.Open();
-
-                Thread.Sleep(300);
-
-                porta.DiscardInBuffer();
-                porta.DiscardOutBuffer();
-
-                /*
-                 * Envia:
-                 * AA 55 01 FF
-                 *
-                 * O STM deverá responder:
-                 * AA 55 01 FF
-                 */
-
-                porta.Write(
-                    ASSINATURA,
-                    0,
-                    ASSINATURA.Length
-                );
-
-                if (EsperarAssinatura(porta, 1500))
-                {
-                    Console.WriteLine(
-                        "LightSentinel encontrado!"
-                    );
-
-                    /*
-                     * Limpa qualquer byte restante
-                     * antes de começar a ler texto.
-                     */
-                    Thread.Sleep(100);
-
-                    porta.DiscardInBuffer();
-
-                    return porta;
-                }
-
-                Console.WriteLine("não corresponde.");
-
-                porta.Close();
-                porta.Dispose();
-            }
-            catch (UnauthorizedAccessException)
-            {
-                Console.WriteLine("porta ocupada.");
-
-                try
-                {
-                    if (porta != null && porta.IsOpen)
-                        porta.Close();
-                }
-                catch
-                {
-                    Console.WriteLine ("erro catch");
-                }
-
-                porta?.Dispose();
-            }
-            catch (Exception)
-            {
-                Console.WriteLine("sem resposta.");
-
-                try
-                {
-                    if (porta != null && porta.IsOpen)
-                        porta.Close();
-                }
-                catch
-                {
-                }
-
-                porta?.Dispose();
-            }
-        }
-
-        return null;
-    }
-
-    static bool EsperarAssinatura(
-        SerialPort porta,
-        int timeoutMs
-    )
+    static bool EsperarAssinatura(Stream stream, int timeoutMs)
     {
         int indice = 0;
-
-        DateTime limite =
-            DateTime.Now.AddMilliseconds(timeoutMs);
+        DateTime limite = DateTime.Now.AddMilliseconds(timeoutMs);
 
         while (DateTime.Now < limite)
         {
-            if (porta.BytesToRead > 0)
+            try
             {
-                int recebido = porta.ReadByte();
-
-                if (recebido == ASSINATURA[indice])
+                if (stream.CanRead && ((NetworkStream)stream).DataAvailable)
                 {
-                    indice++;
+                    int recebido = stream.ReadByte();
 
-                    if (indice == ASSINATURA.Length)
-                        return true;
+                    if (recebido == ASSINATURA[indice])
+                    {
+                        indice++;
+
+                        if (indice == ASSINATURA.Length)
+                            return true;
+                    }
+                    else
+                    {
+                        if (recebido == ASSINATURA[0])
+                            indice = 1;
+                        else
+                            indice = 0;
+                    }
                 }
                 else
                 {
-                    if (recebido == ASSINATURA[0])
-                        indice = 1;
-                    else
-                        indice = 0;
+                    Thread.Sleep(5);
                 }
             }
-            else
+            catch
             {
-                Thread.Sleep(10);
+                return false;
             }
         }
 
         return false;
     }
 
-    static async Task ReceberDados(SerialPort porta)
+    static async Task ReceberDados(Stream stream, BluetoothClient btClient)
     {
-        while (porta.IsOpen)
-        {
-            string linha;
+        byte[] buffer = new byte[1024];
+        StringBuilder construtorLinha = new StringBuilder();
 
+        while (btClient.Connected)
+        {
             try
             {
-                linha = porta.ReadLine().Trim();
-            }
-            catch (TimeoutException)
-            {
-                continue;
-            }
+                if (stream.CanRead && ((NetworkStream)stream).DataAvailable)
+                {
+                    int bytesLidos = stream.Read(buffer, 0, buffer.Length);
+                    if (bytesLidos == 0) break;
 
-            if (string.IsNullOrWhiteSpace(linha))
-                continue;
+                    string textoLido = Encoding.ASCII.GetString(buffer, 0, bytesLidos);
 
-            Console.WriteLine($"STM -> {linha}");
+                    foreach (char c in textoLido)
+                    {
+                        if (c == '\n' || c == '\r')
+                        {
+                            string linha = construtorLinha.ToString().Trim();
+                            construtorLinha.Clear();
 
-            if (linha.StartsWith("GPS |"))
-            {
-                ProcessarGPS(linha);
+                            if (!string.IsNullOrWhiteSpace(linha))
+                            {
+                                Console.WriteLine($"STM -> {linha}");
+
+                                if (linha.StartsWith("GPS |"))
+                                {
+                                    ProcessarGPS(linha);
+                                }
+                                else if (linha.StartsWith("Lux:"))
+                                {
+                                    ProcessarLux(linha);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            construtorLinha.Append(c);
+                        }
+                    }
+                }
+                else
+                {
+                    await Task.Delay(5);
+                }
             }
-            else if (linha.StartsWith("Lux:"))
+            catch (IOException)
             {
-                await ProcessarLux(linha);
+                Console.WriteLine("Aviso: Conexão interrompida.");
+                break;
+            }
+            catch (Exception)
+            {
+                break;
             }
         }
     }
@@ -347,21 +234,14 @@ class Program
                 @"UTC:\s*(\d{2}):(\d{2}):(\d{2})"
             );
 
-            if (!latMatch.Success ||
-                !lonMatch.Success)
+            if (!latMatch.Success || !lonMatch.Success)
             {
-                Console.WriteLine(
-                    "GPS recebido sem coordenadas válidas."
-                );
-
+                Console.WriteLine("GPS recebido sem coordenadas válidas.");
                 return;
             }
 
-            string latTexto =
-                latMatch.Groups[1].Value.Replace(',', '.');
-
-            string lonTexto =
-                lonMatch.Groups[1].Value.Replace(',', '.');
+            string latTexto = latMatch.Groups[1].Value.Replace(',', '.');
+            string lonTexto = lonMatch.Groups[1].Value.Replace(',', '.');
 
             bool latOk = double.TryParse(
                 latTexto,
@@ -379,42 +259,22 @@ class Program
 
             if (!latOk || !lonOk)
             {
-                Console.WriteLine(
-                    "Erro ao converter coordenadas."
-                );
-
+                Console.WriteLine("Erro ao converter coordenadas.");
                 return;
             }
 
             ultimaLatitude = lat;
             ultimaLongitude = lon;
 
-            if (dataMatch.Success &&
-                horaMatch.Success)
+            if (dataMatch.Success && horaMatch.Success)
             {
-                int dia = int.Parse(
-                    dataMatch.Groups[1].Value
-                );
+                int dia = int.Parse(dataMatch.Groups[1].Value);
+                int mes = int.Parse(dataMatch.Groups[2].Value);
+                int ano = int.Parse(dataMatch.Groups[3].Value);
 
-                int mes = int.Parse(
-                    dataMatch.Groups[2].Value
-                );
-
-                int ano = int.Parse(
-                    dataMatch.Groups[3].Value
-                );
-
-                int hora = int.Parse(
-                    horaMatch.Groups[1].Value
-                );
-
-                int minuto = int.Parse(
-                    horaMatch.Groups[2].Value
-                );
-
-                int segundo = int.Parse(
-                    horaMatch.Groups[3].Value
-                );
+                int hora = int.Parse(horaMatch.Groups[1].Value);
+                int minuto = int.Parse(horaMatch.Groups[2].Value);
+                int segundo = int.Parse(horaMatch.Groups[3].Value);
 
                 DateTime utc = new DateTime(
                     ano,
@@ -426,17 +286,11 @@ class Program
                     DateTimeKind.Utc
                 );
 
-                ultimoTimestamp =
-                    utc.ToString(
-                        "yyyy-MM-ddTHH:mm:ssZ"
-                    );
+                ultimoTimestamp = utc.ToString("yyyy-MM-ddTHH:mm:ssZ");
             }
             else
             {
-                ultimoTimestamp =
-                    DateTime.UtcNow.ToString(
-                        "yyyy-MM-ddTHH:mm:ssZ"
-                    );
+                ultimoTimestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ");
             }
 
             gpsValido = true;
@@ -449,13 +303,11 @@ class Program
         }
         catch (Exception erro)
         {
-            Console.WriteLine(
-                $"Erro ao processar GPS: {erro.Message}"
-            );
+            Console.WriteLine($"Erro ao processar GPS: {erro.Message}");
         }
     }
 
-    static async Task ProcessarLux(string linha)
+    static void ProcessarLux(string linha)
     {
         try
         {
@@ -466,15 +318,11 @@ class Program
 
             if (!match.Success)
             {
-                Console.WriteLine(
-                    "Não foi possível interpretar o Lux."
-                );
-
+                Console.WriteLine("Não foi possível interpretar o Lux.");
                 return;
             }
 
-            string texto =
-                match.Groups[1].Value.Replace(',', '.');
+            string texto = match.Groups[1].Value.Replace(',', '.');
 
             if (!double.TryParse(
                     texto,
@@ -483,34 +331,23 @@ class Program
                     out double lux
                 ))
             {
-                Console.WriteLine(
-                    "Erro ao converter o Lux."
-                );
-
+                Console.WriteLine("Erro ao converter o Lux.");
                 return;
             }
 
             if (!gpsValido)
             {
-                Console.WriteLine(
-                    "Lux recebido, mas ainda não existe GPS válido."
-                );
-
+                Console.WriteLine("Lux recebido, mas ainda não existe GPS válido.");
                 return;
             }
 
-            double luminosidade =
-                LuxParaPercentual(lux);
+            double luminosidade = LuxParaPercentual(lux);
 
             Medicao medicao = new Medicao
             {
-                luminosidade =
-                    Math.Round(luminosidade, 2),
-
+                luminosidade = Math.Round(luminosidade, 2),
                 lat = ultimaLatitude,
-
                 lng = ultimaLongitude,
-
                 timestamp = ultimoTimestamp
             };
 
@@ -518,14 +355,10 @@ class Program
                 $"Medição -> Lux: {lux:F2} | " +
                 $"Escala: {luminosidade:F2}"
             );
-
-            await EnviarMedicao(medicao);
         }
         catch (Exception erro)
         {
-            Console.WriteLine(
-                $"Erro ao processar Lux: {erro.Message}"
-            );
+            Console.WriteLine($"Erro ao processar Lux: {erro.Message}");
         }
     }
 
@@ -542,12 +375,8 @@ class Program
         return (lux / LUX_MAXIMO) * 100.0;
     }
 
-    static async Task EnviarMedicao(
-        Medicao medicao
-    )
+    static async Task EnviarMedicao(Medicao medicao)
     {
-        // CORREÇÃO: reaproveita o HttpClient estático em vez de criar
-        // (e descartar) um novo a cada chamada.
         try
         {
             HttpResponseMessage resposta =
@@ -558,14 +387,11 @@ class Program
 
             if (resposta.IsSuccessStatusCode)
             {
-                Console.WriteLine(
-                    "Servidor -> medição registrada."
-                );
+                Console.WriteLine("Servidor -> medição registrada.");
             }
             else
             {
-                string mensagem =
-                    await resposta.Content.ReadAsStringAsync();
+                string mensagem = await resposta.Content.ReadAsStringAsync();
 
                 Console.WriteLine(
                     $"Servidor -> ERRO " +
@@ -576,10 +402,7 @@ class Program
         }
         catch (Exception erro)
         {
-            Console.WriteLine(
-                $"Erro ao acessar servidor: " +
-                $"{erro.Message}"
-            );
+            Console.WriteLine($"Erro ao acessar servidor: {erro.Message}");
         }
     }
 }

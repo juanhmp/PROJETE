@@ -2,6 +2,35 @@
   "version": 3,
   "targets": {
     "net10.0": {
+      "InTheHand.Net.Bluetooth/4.2.5": {
+        "type": "package",
+        "dependencies": {
+          "Linux.Bluetooth": "5.67.1",
+          "Tmds.DBus": "0.95.1"
+        },
+        "compile": {
+          "lib/net10.0/InTheHand.Net.Bluetooth.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net10.0/InTheHand.Net.Bluetooth.dll": {
+            "related": ".xml"
+          }
+        }
+      },
+      "Linux.Bluetooth/5.67.1": {
+        "type": "package",
+        "dependencies": {
+          "Tmds.DBus": "0.20.0"
+        },
+        "compile": {
+          "lib/netstandard2.0/Linux.Bluetooth.dll": {}
+        },
+        "runtime": {
+          "lib/netstandard2.0/Linux.Bluetooth.dll": {}
+        }
+      },
       "runtime.android-arm.runtime.native.System.IO.Ports/10.0.12": {
         "type": "package",
         "runtimeTargets": {
@@ -1155,10 +1184,72 @@
             "rid": "win"
           }
         }
+      },
+      "Tmds.DBus/0.95.1": {
+        "type": "package",
+        "compile": {
+          "lib/net6.0/Tmds.DBus.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net6.0/Tmds.DBus.dll": {
+            "related": ".xml"
+          }
+        }
       }
     }
   },
   "libraries": {
+    "InTheHand.Net.Bluetooth/4.2.5": {
+      "sha512": "KmygNTiX7sESG8q0TE7tTuEJ7RDAbp4Ulpzy3fSRjEOxEMv48OZAPXnkvLWm48wtDJSJfBT6XbO1xIklrQba3Q==",
+      "type": "package",
+      "path": "inthehand.net.bluetooth/4.2.5",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "32feet-package-icon.png",
+        "README.md",
+        "inthehand.net.bluetooth.4.2.5.nupkg.sha512",
+        "inthehand.net.bluetooth.nuspec",
+        "lib/net10.0-android36.0/InTheHand.Net.Bluetooth.dll",
+        "lib/net10.0-android36.0/InTheHand.Net.Bluetooth.xml",
+        "lib/net10.0-ios26.0/InTheHand.Net.Bluetooth.dll",
+        "lib/net10.0-ios26.0/InTheHand.Net.Bluetooth.xml",
+        "lib/net10.0/InTheHand.Net.Bluetooth.dll",
+        "lib/net10.0/InTheHand.Net.Bluetooth.xml",
+        "lib/net462/InTheHand.Net.Bluetooth.dll",
+        "lib/net462/InTheHand.Net.Bluetooth.xml",
+        "lib/net9.0-android35.0/InTheHand.Net.Bluetooth.dll",
+        "lib/net9.0-android35.0/InTheHand.Net.Bluetooth.xml",
+        "lib/net9.0-ios18.0/InTheHand.Net.Bluetooth.dll",
+        "lib/net9.0-ios18.0/InTheHand.Net.Bluetooth.xml",
+        "lib/net9.0-windows10.0.19041/InTheHand.Net.Bluetooth.dll",
+        "lib/net9.0-windows10.0.19041/InTheHand.Net.Bluetooth.xml",
+        "lib/net9.0-windows7.0/InTheHand.Net.Bluetooth.dll",
+        "lib/net9.0-windows7.0/InTheHand.Net.Bluetooth.xml",
+        "lib/net9.0/InTheHand.Net.Bluetooth.dll",
+        "lib/net9.0/InTheHand.Net.Bluetooth.xml",
+        "lib/netstandard2.0/InTheHand.Net.Bluetooth.dll",
+        "lib/netstandard2.0/InTheHand.Net.Bluetooth.xml",
+        "lib/netstandard2.1/InTheHand.Net.Bluetooth.dll",
+        "lib/netstandard2.1/InTheHand.Net.Bluetooth.xml"
+      ]
+    },
+    "Linux.Bluetooth/5.67.1": {
+      "sha512": "DkSxrPTWGn6Wx0d+/HfCsy/F82Ttfb9DLnWVqBDem46zftrm75UDx0seP6Ii0EljjWTu9Dwgb9T3QzzdSQr5Ow==",
+      "type": "package",
+      "path": "linux.bluetooth/5.67.1",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "Linux.Bluetooth-128x128.png",
+        "README.md",
+        "lib/netstandard2.0/Linux.Bluetooth.dll",
+        "linux.bluetooth.5.67.1.nupkg.sha512",
+        "linux.bluetooth.nuspec"
+      ]
+    },
     "runtime.android-arm.runtime.native.System.IO.Ports/10.0.12": {
       "sha512": "Z/jM+BuTfcX79NS8VbO4d15Tkyu8EqO2E8U3HiTQPpohGzhJFwlh6BNzbo/sYfhJSCPOzgSTNRNwIdT4LnVIRA==",
       "type": "package",
@@ -1710,10 +1801,28 @@
         "system.io.ports.nuspec",
         "useSharedDesignerContext.txt"
       ]
+    },
+    "Tmds.DBus/0.95.1": {
+      "sha512": "2mLo+choDFkVlpYN1dcAmFESclH/LoMGg4whvvV4RFM9xbBniRwqNb0/Fe3/z4RCzXSQi+Gb6SzM2c19WcoP3Q==",
+      "type": "package",
+      "path": "tmds.dbus/0.95.1",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "README.md",
+        "icon_128.png",
+        "lib/net6.0/Tmds.DBus.dll",
+        "lib/net6.0/Tmds.DBus.xml",
+        "lib/netstandard2.0/Tmds.DBus.dll",
+        "lib/netstandard2.0/Tmds.DBus.xml",
+        "tmds.dbus.0.95.1.nupkg.sha512",
+        "tmds.dbus.nuspec"
+      ]
     }
   },
   "projectFileDependencyGroups": {
     "net10.0": [
+      "InTheHand.Net.Bluetooth >= 4.2.5",
       "System.IO.Ports >= 10.0.12"
     ]
   },
@@ -1762,6 +1871,10 @@
       "net10.0": {
         "targetAlias": "net10.0",
         "dependencies": {
+          "InTheHand.Net.Bluetooth": {
+            "target": "Package",
+            "version": "[4.2.5, )"
+          },
           "System.IO.Ports": {
             "target": "Package",
             "version": "[10.0.12, )"

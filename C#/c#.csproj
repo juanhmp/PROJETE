@@ -9,6 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="InTheHand.Net.Bluetooth" Version="4.2.5" />
     <PackageReference Include="System.IO.Ports" Version="10.0.12" />
   </ItemGroup>
 

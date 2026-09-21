@@ -8,10 +8,34 @@
     ".NETCoreApp,Version=v10.0": {
       "c#/1.0.0": {
         "dependencies": {
+          "InTheHand.Net.Bluetooth": "4.2.5",
           "System.IO.Ports": "10.0.12"
         },
         "runtime": {
           "c#.dll": {}
+        }
+      },
+      "InTheHand.Net.Bluetooth/4.2.5": {
+        "dependencies": {
+          "Linux.Bluetooth": "5.67.1",
+          "Tmds.DBus": "0.95.1"
+        },
+        "runtime": {
+          "lib/net10.0/InTheHand.Net.Bluetooth.dll": {
+            "assemblyVersion": "4.2.5.0",
+            "fileVersion": "4.2.5.0"
+          }
+        }
+      },
+      "Linux.Bluetooth/5.67.1": {
+        "dependencies": {
+          "Tmds.DBus": "0.95.1"
+        },
+        "runtime": {
+          "lib/netstandard2.0/Linux.Bluetooth.dll": {
+            "assemblyVersion": "5.67.1.0",
+            "fileVersion": "5.67.1.0"
+          }
         }
       },
       "runtime.android-arm.runtime.native.System.IO.Ports/10.0.12": {
@@ -202,6 +226,14 @@
             "fileVersion": "10.0.1226.42308"
           }
         }
+      },
+      "Tmds.DBus/0.95.1": {
+        "runtime": {
+          "lib/net6.0/Tmds.DBus.dll": {
+            "assemblyVersion": "0.95.1.0",
+            "fileVersion": "0.95.1.0"
+          }
+        }
       }
     }
   },
@@ -210,6 +242,20 @@
       "type": "project",
       "serviceable": false,
       "sha512": ""
+    },
+    "InTheHand.Net.Bluetooth/4.2.5": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-KmygNTiX7sESG8q0TE7tTuEJ7RDAbp4Ulpzy3fSRjEOxEMv48OZAPXnkvLWm48wtDJSJfBT6XbO1xIklrQba3Q==",
+      "path": "inthehand.net.bluetooth/4.2.5",
+      "hashPath": "inthehand.net.bluetooth.4.2.5.nupkg.sha512"
+    },
+    "Linux.Bluetooth/5.67.1": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-DkSxrPTWGn6Wx0d+/HfCsy/F82Ttfb9DLnWVqBDem46zftrm75UDx0seP6Ii0EljjWTu9Dwgb9T3QzzdSQr5Ow==",
+      "path": "linux.bluetooth/5.67.1",
+      "hashPath": "linux.bluetooth.5.67.1.nupkg.sha512"
     },
     "runtime.android-arm.runtime.native.System.IO.Ports/10.0.12": {
       "type": "package",
@@ -336,6 +382,13 @@
       "sha512": "sha512-qUa36rEId4mz9sf7mICT3kKC0DUetmqaKSmJxPPx2hgT7U8qDTjCSrqmWkCIWpU00f2ltWloYB0iy5BKymIuuQ==",
       "path": "system.io.ports/10.0.12",
       "hashPath": "system.io.ports.10.0.12.nupkg.sha512"
+    },
+    "Tmds.DBus/0.95.1": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-2mLo+choDFkVlpYN1dcAmFESclH/LoMGg4whvvV4RFM9xbBniRwqNb0/Fe3/z4RCzXSQi+Gb6SzM2c19WcoP3Q==",
+      "path": "tmds.dbus/0.95.1",
+      "hashPath": "tmds.dbus.0.95.1.nupkg.sha512"
     }
   }
 }

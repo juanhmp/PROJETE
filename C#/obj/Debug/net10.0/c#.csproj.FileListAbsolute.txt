@@ -34,3 +34,6 @@ C:\Users\Mariana\OneDrive\Desktop\ETE_2K26\Projete_3403\PROJETE\C#\obj\Debug\net
 C:\Users\Mariana\OneDrive\Desktop\ETE_2K26\Projete_3403\PROJETE\C#\obj\Debug\net10.0\c#.pdb
 C:\Users\Mariana\OneDrive\Desktop\ETE_2K26\Projete_3403\PROJETE\C#\obj\Debug\net10.0\c#.genruntimeconfig.cache
 C:\Users\Mariana\OneDrive\Desktop\ETE_2K26\Projete_3403\PROJETE\C#\obj\Debug\net10.0\ref\c#.dll
+C:\Users\Mariana\OneDrive\Desktop\ETE_2K26\Projete_3403\PROJETE\C#\bin\Debug\net10.0\InTheHand.Net.Bluetooth.dll
+C:\Users\Mariana\OneDrive\Desktop\ETE_2K26\Projete_3403\PROJETE\C#\bin\Debug\net10.0\Linux.Bluetooth.dll
+C:\Users\Mariana\OneDrive\Desktop\ETE_2K26\Projete_3403\PROJETE\C#\bin\Debug\net10.0\Tmds.DBus.dll
