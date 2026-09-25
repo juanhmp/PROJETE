@@ -24,6 +24,19 @@ class Program
         0xAA, 0x55, 0x01, 0xFF
     };
 
+    // Comando enviado ao STM32 pedindo o início do descarregamento
+    // (deve ser exatamente a mesma string esperada no firmware)
+    static readonly byte[] COMANDO_DESCARREGAR = Encoding.ASCII.GetBytes("CMD_DESCARREGAR\n");
+
+    // Marcador de fim de descarregamento enviado pelo STM32
+    // (deve ser exatamente a mesma string usada no firmware)
+    const string MARCADOR_FIM = "END_OF_DATA";
+
+    // Confirmação enviada de volta ao STM32 após o lote ser
+    // totalmente processado e enviado ao servidor — só ao receber
+    // isso o STM32 deve limpar o MicroSD
+    static readonly byte[] ACK_RECEBIDO = Encoding.ASCII.GetBytes("ACK_SUCCESS\n");
+
     // HttpClient único, reaproveitado por todo o programa
     static readonly HttpClient cliente = new HttpClient
     {
@@ -34,6 +47,7 @@ class Program
     static double ultimaLongitude = 0;
     static string? ultimoTimestamp = null;
     static bool gpsValido = false;
+    static int medicoesRecebidasNoLote = 0;
 
     public class Medicao
     {
@@ -77,8 +91,18 @@ class Program
                 if (EsperarAssinatura(stream, 1500))
                 {
                     Console.WriteLine("LightSentinel verificado com sucesso!");
-                    Console.WriteLine("Recebendo dados...");
+                    Console.WriteLine("Solicitando descarregamento ao STM32...");
+
+                    // C# é quem solicita o início do descarregamento
+                    stream.Write(COMANDO_DESCARREGAR, 0, COMANDO_DESCARREGAR.Length);
+                    stream.Flush();
+
+                    Console.WriteLine("Recebendo dados do descarregamento...");
                     Console.WriteLine();
+
+                    // Início de um novo lote de descarregamento
+                    gpsValido = false;
+                    medicoesRecebidasNoLote = 0;
 
                     await ReceberDados(stream, btClient);
                 }
@@ -177,7 +201,12 @@ class Program
                             {
                                 Console.WriteLine($"STM -> {linha}");
 
-                                if (linha.StartsWith("GPS |"))
+                                if (linha.Equals(MARCADOR_FIM, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    await FinalizarLote(stream);
+                                    return; // encerra ReceberDados; o Main() fecha o socket e volta a procurar
+                                }
+                                else if (linha.StartsWith("GPS |"))
                                 {
                                     ProcessarGPS(linha);
                                 }
@@ -208,6 +237,29 @@ class Program
                 break;
             }
         }
+    }
+
+    static async Task FinalizarLote(Stream stream)
+    {
+        Console.WriteLine();
+        Console.WriteLine($"Fim do descarregamento -> {medicoesRecebidasNoLote} medição(ões) processada(s) neste lote.");
+
+        try
+        {
+            // Confirma ao STM32 que todo o lote já foi recebido e
+            // enviado ao servidor, para que ele possa voltar a medir
+            // com segurança (evita perda de dados em caso de queda
+            // de conexão no meio do descarregamento)
+            stream.Write(ACK_RECEBIDO, 0, ACK_RECEBIDO.Length);
+            stream.Flush();
+            Console.WriteLine("ACK enviado ao STM32.");
+        }
+        catch (Exception erro)
+        {
+            Console.WriteLine($"Aviso: falha ao enviar ACK ao STM32: {erro.Message}");
+        }
+
+        await Task.CompletedTask;
     }
 
     static void ProcessarGPS(string linha)
@@ -389,6 +441,7 @@ class Program
 
             if (resposta.IsSuccessStatusCode)
             {
+                medicoesRecebidasNoLote++;
                 Console.WriteLine("Servidor -> medição registrada.");
             }
             else
