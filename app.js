@@ -38,8 +38,8 @@ const PORT = 3000;
 // uma nova coleta e substitui todas as medições da coleta anterior.
 const TEMPO_NOVA_COLETA_MS = 5 * 60 * 1000;
 const PRODUCAO = process.env.NODE_ENV === 'production';
-const SESSION_SECRET = process.env.SESSION_SECRET;
-const OPERATOR_SECRET = process.env.OPERATOR_SECRET;
+const SESSION_SECRET = "lightSentinel3403";
+const OPERATOR_SECRET = "Projete@3403!";
 const PERMITIR_OPERADOR_REMOTO = process.env.ALLOW_OPERATOR_REMOTE === 'true';
 
 if (!SESSION_SECRET || !OPERATOR_SECRET) {

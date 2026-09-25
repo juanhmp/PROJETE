@@ -105,7 +105,7 @@ async function iniciarBanco() {
   const total = await get('SELECT COUNT(*) AS total FROM usuarios');
 
   if (!total || total.total === 0) {
-    const senhaInicial = process.env.INITIAL_ADMIN_PASSWORD;
+    const senhaInicial = "Admin@123";
 
     if (!senhaInicial || senhaInicial.length < 8) {
       throw new Error(
