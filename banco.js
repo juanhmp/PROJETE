@@ -2,7 +2,7 @@ const path = require('path');
 const sqlite3 = require('sqlite3').verbose();
 const bcrypt = require('bcryptjs');
 const db = new sqlite3.Database(path.join(__dirname, 'dados.db'));
-//teste
+//teste teste
 function run(sql, params = []) {
   return new Promise((resolve, reject) => {
     db.run(sql, params, function (erro) {
