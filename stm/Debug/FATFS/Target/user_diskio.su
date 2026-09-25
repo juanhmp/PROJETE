@@ -1,0 +1,11 @@
+user_diskio.c:93:16:SD_SPI_TxRx	32	static
+user_diskio.c:129:13:SD_SPI_SetSlow	4	static
+user_diskio.c:153:13:SD_SPI_SetFast	4	static
+user_diskio.c:177:16:SD_SendCommand	24	static
+user_diskio.c:307:16:SD_ReadBlock	40	static
+user_diskio.c:468:16:SD_WriteBlock	40	static
+user_diskio.c:664:9:USER_initialize	40	static
+user_diskio.c:1255:9:USER_status	16	static
+user_diskio.c:1270:9:USER_read	24	static
+user_diskio.c:1342:9:USER_write	24	static
+user_diskio.c:1416:9:USER_ioctl	96	static
