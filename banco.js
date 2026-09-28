@@ -2,7 +2,7 @@ const path = require('path');
 const sqlite3 = require('sqlite3').verbose();
 const bcrypt = require('bcryptjs');
 const db = new sqlite3.Database(path.join(__dirname, 'dados.db'));
-//teste teste
+// Consultas básicas ao SQLite
 function run(sql, params = []) {
   return new Promise((resolve, reject) => {
     db.run(sql, params, function (erro) {
@@ -32,11 +32,12 @@ function all(sql, params = []) {
 
 async function garantirColuna(tabela, nome, definicao) {
   const colunas = await all(`PRAGMA table_info(${tabela})`);
-  if (!colunas.some(c => c.name === nome)) {
+  if (!colunas.some((c) => c.name === nome)) {
     await run(`ALTER TABLE ${tabela} ADD COLUMN ${nome} ${definicao}`);
   }
 }
 
+// Criação e atualização das tabelas
 async function iniciarBanco() {
   await run(`CREATE TABLE IF NOT EXISTS usuarios (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -96,16 +97,15 @@ async function iniciarBanco() {
   if (!limpezaInicial) {
     await run('DELETE FROM medicoes');
     await run("DELETE FROM configuracoes WHERE chave = 'ultimo_recebimento_medicao'");
-    await run(
-      "INSERT INTO configuracoes (chave, valor) VALUES ('limpeza_medicoes_v1', ?)",
-      [new Date().toISOString()]
-    );
+    await run("INSERT INTO configuracoes (chave, valor) VALUES ('limpeza_medicoes_v1', ?)", [
+      new Date().toISOString(),
+    ]);
   }
 
   const total = await get('SELECT COUNT(*) AS total FROM usuarios');
 
   if (!total || total.total === 0) {
-    const senhaInicial = "Admin@123";
+    const senhaInicial = 'Admin@123';
 
     if (!senhaInicial || senhaInicial.length < 8) {
       throw new Error(
@@ -121,13 +121,13 @@ async function iniciarBanco() {
 
     console.log('Administrador inicial criado. A troca de senha será exigida no primeiro acesso.');
   } else {
-    await run(
-      'UPDATE usuarios SET criado_em = COALESCE(criado_em, ?) WHERE criado_em IS NULL',
-      [new Date().toISOString()]
-    );
+    await run('UPDATE usuarios SET criado_em = COALESCE(criado_em, ?) WHERE criado_em IS NULL', [
+      new Date().toISOString(),
+    ]);
   }
 }
 
+// Contas administrativas
 function buscarUsuarioPorId(id) {
   return get('SELECT * FROM usuarios WHERE id = ?', [id]);
 }
@@ -158,53 +158,42 @@ function buscarAdministradorPorId(id) {
 }
 
 function buscarConflitoUsername(username, idIgnorado) {
-  return get(
-    'SELECT id FROM usuarios WHERE username = ? AND id <> ?',
-    [username, idIgnorado]
-  );
+  return get('SELECT id FROM usuarios WHERE username = ? AND id <> ?', [username, idIgnorado]);
 }
 
 function contarAdministradoresAtivos() {
-  return get(
-    "SELECT COUNT(*) AS total FROM usuarios WHERE role = 'admin' AND ativo = 1"
-  );
+  return get("SELECT COUNT(*) AS total FROM usuarios WHERE role = 'admin' AND ativo = 1");
 }
 
 function atualizarAdministrador(id, nome, username, ativo) {
-  return run(
-    'UPDATE usuarios SET nome = ?, username = ?, ativo = ? WHERE id = ?',
-    [nome, username, ativo ? 1 : 0, id]
-  );
+  return run('UPDATE usuarios SET nome = ?, username = ?, ativo = ? WHERE id = ?', [
+    nome,
+    username,
+    ativo ? 1 : 0,
+    id,
+  ]);
 }
 
 function redefinirSenhaAdministrador(id, passwordHash) {
-  return run(
-    'UPDATE usuarios SET password = ?, trocar_senha = 1, ativo = 1 WHERE id = ?',
-    [passwordHash, id]
-  );
+  return run('UPDATE usuarios SET password = ?, trocar_senha = 1, ativo = 1 WHERE id = ?', [
+    passwordHash,
+    id,
+  ]);
 }
 
 function buscarAdministradorPorLogin(username) {
-  return get(
-    "SELECT * FROM usuarios WHERE username = ? AND role = 'admin'",
-    [username]
-  );
+  return get("SELECT * FROM usuarios WHERE username = ? AND role = 'admin'", [username]);
 }
 
 function atualizarUltimoLogin(id, dataIso) {
-  return run(
-    'UPDATE usuarios SET ultimo_login = ? WHERE id = ?',
-    [dataIso, id]
-  );
+  return run('UPDATE usuarios SET ultimo_login = ? WHERE id = ?', [dataIso, id]);
 }
 
 function alterarSenhaUsuario(id, passwordHash) {
-  return run(
-    'UPDATE usuarios SET password = ?, trocar_senha = 0 WHERE id = ?',
-    [passwordHash, id]
-  );
+  return run('UPDATE usuarios SET password = ?, trocar_senha = 0 WHERE id = ?', [passwordHash, id]);
 }
 
+// Ocorrências registradas pelos usuários
 function listarOcorrencias() {
   return all('SELECT * FROM ocorrencias ORDER BY id DESC');
 }
@@ -219,17 +208,12 @@ function criarOcorrencia({ location, description, priority, timestamp, criadoPor
 }
 
 function atualizarStatusOcorrencia(id, status) {
-  return run(
-    'UPDATE ocorrencias SET status = ? WHERE id = ?',
-    [status, id]
-  );
+  return run('UPDATE ocorrencias SET status = ? WHERE id = ?', [status, id]);
 }
 
+// Medições, lotes e agregação do mapa de calor
 function listarMedicoes(limite) {
-  return all(
-    'SELECT * FROM medicoes ORDER BY id DESC LIMIT ?',
-    [limite]
-  );
+  return all('SELECT * FROM medicoes ORDER BY id DESC LIMIT ?', [limite]);
 }
 
 async function buscarAreasMapaCalor() {
@@ -271,15 +255,7 @@ async function buscarAreasMapaCalor() {
   return { loteId, dados };
 }
 
-function inserirMedicao({
-  luminosidade,
-  lat,
-  lng,
-  local,
-  origem,
-  loteId,
-  timestamp
-}) {
+function inserirMedicao({ luminosidade, lat, lng, local, origem, loteId, timestamp }) {
   return run(
     `INSERT INTO medicoes
       (luminosidade, lat, lng, local, origem, lote_id, timestamp)
@@ -293,9 +269,7 @@ function excluirTodasMedicoes() {
 }
 
 function obterUltimoRecebimentoMedicao() {
-  return get(
-    "SELECT valor FROM configuracoes WHERE chave = 'ultimo_recebimento_medicao'"
-  );
+  return get("SELECT valor FROM configuracoes WHERE chave = 'ultimo_recebimento_medicao'");
 }
 
 function registrarUltimoRecebimentoMedicao(dataIso) {
@@ -326,7 +300,7 @@ async function obterDashboard() {
 
   return {
     totalOcorrencias: ocorrencias.total,
-    totalMedicoes: medicoes.total
+    totalMedicoes: medicoes.total,
   };
 }
 
@@ -354,5 +328,5 @@ module.exports = {
   obterUltimoRecebimentoMedicao,
   registrarUltimoRecebimentoMedicao,
   executarTransacao,
-  obterDashboard
+  obterDashboard,
 };

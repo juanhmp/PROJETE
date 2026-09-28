@@ -1,0 +1,9 @@
+# Dependências, bibliotecas externas e arquivos gerados
+node_modules/
+simulador/public/vendor/
+C#/
+stm/
+package-lock.json
+*.db
+*.db-shm
+*.db-wal

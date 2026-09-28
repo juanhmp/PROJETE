@@ -134,18 +134,18 @@ O backend utiliza **Node.js com Express**, enquanto os dados persistentes são a
 
 ### Principais tecnologias
 
-| Tecnologia | Utilização |
-|---|---|
-| Node.js | Execução do backend |
-| Express | Servidor e rotas HTTP |
-| SQLite | Banco de dados relacional |
-| HTML | Estrutura das páginas |
-| CSS | Interface visual |
-| JavaScript | Interatividade e comunicação com a API |
-| Leaflet | Mapa interativo |
-| OpenStreetMap | Camada cartográfica |
-| Leaflet.heat | Representação do mapa de calor |
-| bcryptjs | Proteção das senhas administrativas |
+| Tecnologia    | Utilização                             |
+| ------------- | -------------------------------------- |
+| Node.js       | Execução do backend                    |
+| Express       | Servidor e rotas HTTP                  |
+| SQLite        | Banco de dados relacional              |
+| HTML          | Estrutura das páginas                  |
+| CSS           | Interface visual                       |
+| JavaScript    | Interatividade e comunicação com a API |
+| Leaflet       | Mapa interativo                        |
+| OpenStreetMap | Camada cartográfica                    |
+| Leaflet.heat  | Representação do mapa de calor         |
+| bcryptjs      | Proteção das senhas administrativas    |
 
 ---
 
@@ -309,32 +309,52 @@ Essa conta será obrigada a trocar a senha no primeiro acesso.
 
 # 📁 Organização do repositório
 
-Como o projeto reúne hardware e software, a organização prevista para o repositório é:
+O código está organizado por responsabilidade. Os comandos de execução partem da raiz do repositório.
 
-```text
-LightSentinel/
-│
-├── STM/
-│   └── Firmware e arquivos do STM32
-│
-├── Site/
-│   ├── app.js
-│   ├── package.json
-│   └── pages/
-│
-├── README.md
-│
-└── Documentacao/
-    └── Arquivos complementares do projeto
+| Caminho                          | Responsabilidade                                            |
+| -------------------------------- | ----------------------------------------------------------- |
+| `app.js`                         | Servidor principal, autenticação e API do site (porta 3000) |
+| `banco.js`                       | Acesso ao SQLite e dados do hardware real                   |
+| `pages/`                         | Páginas do usuário, administrador e operador                |
+| `simulador/server.js`            | Aplicação independente da feira (porta 3001)                |
+| `simulador/integracao.js`        | Recebimento dos lotes simulados e integração com o banco    |
+| `simulador/rotas.js`             | Consulta de ruas e rotas ao OSRM                            |
+| `simulador/public/app.js`        | Interface, sensor e microSD virtual                         |
+| `simulador/public/iluminacao.js` | Configuração dos pontos e dos lux                           |
+| `simulador/public/navegacao.js`  | Planejamento de paradas, movimento e câmera                 |
+| `simulador/public/percurso.js`   | Cálculo da posição ao longo da rota                         |
+| `simulador/public/areas.js`      | Agregação das leituras nas coordenadas exatas               |
+| `simulador/public/style.css`     | Aparência do simulador                                      |
+| `simulador/public/vendor/`       | Bibliotecas do mapa e respectivas licenças                  |
+| `C#/Program.cs`                  | Aplicação da base que recebe o Bluetooth e envia ao site    |
+| `stm/teste_projete/`             | Projeto STM32CubeIDE, fontes, bibliotecas e configuração    |
+| `tests/`                         | Testes de armazenamento, mapa e navegação                   |
+| `README.md`                      | Documentação completa do projeto e da demonstração          |
+
+### Padrão de formatação
+
+Os arquivos JavaScript, HTML, CSS e a documentação usam Prettier. O arquivo `.editorconfig` define o padrão básico para os editores.
+
+```powershell
+npm.cmd install
+npm.cmd run format
+npm.cmd run format:check
 ```
 
-A estrutura pode ser ajustada conforme o desenvolvimento do firmware e da documentação avançar.
+Para iniciar o simulador e rodar os testes:
+
+```powershell
+npm.cmd run simulador
+npm.cmd test
+```
+
+`node_modules`, `C#/bin`, `C#/obj` e os diretórios `Debug`/`Release` do STM32 são gerados localmente e ficam fora do versionamento. Após atualizar uma instalação antiga, execute `npm.cmd install` para restaurar as dependências do site. No C#, restaure os pacotes e compile pelo Visual Studio; no STM32CubeIDE, use Build Project para recriar os arquivos de compilação.
 
 ---
 
 # 🚀 Executando o sistema web
 
-Entre na pasta do site e instale as dependências:
+Na raiz do repositório, instale as dependências:
 
 ```powershell
 npm.cmd install
@@ -505,7 +525,6 @@ O projeto pode futuramente receber recursos como:
 - integração com outros sistemas de manutenção urbana.
 
 ---
-
 
 # 👥 Equipe do projeto
 

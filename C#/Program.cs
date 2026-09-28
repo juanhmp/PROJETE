@@ -14,18 +14,15 @@ using InTheHand.Net.Sockets;
 
 using System.Net.Sockets;
 
-
 class Program
 {
     const string URL_SERVIDOR = "http://localhost:3000";
-
 
     /*
      * Endereco MAC do HC-05.
      */
     static readonly BluetoothAddress ENDERECO_HC05 =
         BluetoothAddress.Parse("002113003A1E");
-
 
     /*
      * Assinatura binaria LightSentinel.
@@ -38,7 +35,6 @@ class Program
         0xFF
     };
 
-
     /*
      * Comando para iniciar a transferencia
      * do arquivo que JA estava armazenado
@@ -49,14 +45,12 @@ class Program
             "CMD_DESCARREGAR\n"
         );
 
-
     /*
      * STM32 envia isso depois que terminou
      * de enviar TODO o dados.txt.
      */
     const string MARCADOR_FIM =
         "END_OF_DATA";
-
 
     /*
      * Confirmacao enviada ao STM32.
@@ -66,14 +60,12 @@ class Program
             "ACK_SUCCESS\n"
         );
 
-
     static readonly HttpClient cliente =
         new HttpClient
         {
             Timeout =
                 TimeSpan.FromSeconds(10)
         };
-
 
     static double ultimaLatitude = 0;
 
@@ -85,7 +77,6 @@ class Program
 
     static int medicoesRecebidasNoLote = 0;
 
-
     public class Medicao
     {
         public double luminosidade
@@ -94,13 +85,11 @@ class Program
             set;
         }
 
-
         public double lat
         {
             get;
             set;
         }
-
 
         public double lng
         {
@@ -108,14 +97,12 @@ class Program
             set;
         }
 
-
         public string? timestamp
         {
             get;
             set;
         }
     }
-
 
     static async Task Main()
     {
@@ -455,7 +442,6 @@ class Program
         }
     }
 
-
     /* =====================================================================
        AGUARDAR DESCONEXAO REAL
        ===================================================================== */
@@ -528,7 +514,6 @@ class Program
         }
     }
 
-
     /* =====================================================================
        ESPERAR ASSINATURA
        ===================================================================== */
@@ -541,12 +526,10 @@ class Program
         int indice =
             0;
 
-
         DateTime limite =
             DateTime.Now.AddMilliseconds(
                 timeoutMs
             );
-
 
         while (
             DateTime.Now <
@@ -564,14 +547,12 @@ class Program
                     int recebido =
                         stream.ReadByte();
 
-
                     if (
                         recebido ==
                         ASSINATURA[indice]
                     )
                     {
                         indice++;
-
 
                         if (
                             indice ==
@@ -611,10 +592,8 @@ class Program
             }
         }
 
-
         return false;
     }
-
 
     /* =====================================================================
        RECEBER DADOS ARMAZENADOS
@@ -628,10 +607,8 @@ class Program
         byte[] buffer =
             new byte[1024];
 
-
         StringBuilder construtorLinha =
             new StringBuilder();
-
 
         while (
             btClient.Connected
@@ -652,7 +629,6 @@ class Program
                             buffer.Length
                         );
 
-
                     if (
                         bytesLidos == 0
                     )
@@ -660,14 +636,12 @@ class Program
                         return false;
                     }
 
-
                     string textoLido =
                         Encoding.ASCII.GetString(
                             buffer,
                             0,
                             bytesLidos
                         );
-
 
                     foreach (
                         char c in textoLido
@@ -684,9 +658,7 @@ class Program
                                     .ToString()
                                     .Trim();
 
-
                             construtorLinha.Clear();
-
 
                             if (
                                 string.IsNullOrWhiteSpace(
@@ -697,11 +669,9 @@ class Program
                                 continue;
                             }
 
-
                             Console.WriteLine(
                                 $"STM -> {linha}"
                             );
-
 
                             /*
                              * Final do arquivo.
@@ -719,10 +689,8 @@ class Program
                                     $"Fim do arquivo -> {medicoesRecebidasNoLote} medicao(oes) enviada(s) ao servidor."
                                 );
 
-
                                 return true;
                             }
-
 
                             /*
                              * Linha GPS que JA estava
@@ -738,10 +706,8 @@ class Program
                                     linha
                                 );
 
-
                                 continue;
                             }
-
 
                             /*
                              * Linha Lux que JA estava
@@ -756,7 +722,6 @@ class Program
                                 await ProcessarLux(
                                     linha
                                 );
-
 
                                 continue;
                             }
@@ -784,7 +749,6 @@ class Program
                     "Conexao Bluetooth interrompida."
                 );
 
-
                 return false;
             }
             catch (
@@ -795,15 +759,12 @@ class Program
                     $"Erro durante recepcao: {erro.Message}"
                 );
 
-
                 return false;
             }
         }
 
-
         return false;
     }
-
 
     /* =====================================================================
        ENVIAR ACK
@@ -821,7 +782,6 @@ class Program
                 ACK_RECEBIDO.Length
             );
 
-
             stream.Flush();
         }
         catch (
@@ -833,10 +793,8 @@ class Program
             );
         }
 
-
         await Task.CompletedTask;
     }
-
 
     /* =====================================================================
        PROCESSAR GPS
@@ -854,13 +812,11 @@ class Program
                     @"Lat:\s*(-?\d+[.,]\d+)"
                 );
 
-
             Match lonMatch =
                 Regex.Match(
                     linha,
                     @"Lon:\s*(-?\d+[.,]\d+)"
                 );
-
 
             Match dataMatch =
                 Regex.Match(
@@ -868,13 +824,11 @@ class Program
                     @"Data:\s*(\d{2})/(\d{2})/(\d{4})"
                 );
 
-
             Match horaMatch =
                 Regex.Match(
                     linha,
                     @"UTC:\s*(\d{2}):(\d{2}):(\d{2})"
                 );
-
 
             if (
                 !latMatch.Success
@@ -886,10 +840,8 @@ class Program
                     "GPS recebido sem coordenadas validas."
                 );
 
-
                 return;
             }
-
 
             string latTexto =
                 latMatch
@@ -897,13 +849,11 @@ class Program
                     .Value
                     .Replace(',', '.');
 
-
             string lonTexto =
                 lonMatch
                     .Groups[1]
                     .Value
                     .Replace(',', '.');
-
 
             bool latOk =
                 double.TryParse(
@@ -913,7 +863,6 @@ class Program
                     out double lat
                 );
 
-
             bool lonOk =
                 double.TryParse(
                     lonTexto,
@@ -921,7 +870,6 @@ class Program
                     CultureInfo.InvariantCulture,
                     out double lon
                 );
-
 
             if (
                 !latOk
@@ -933,18 +881,14 @@ class Program
                     "Erro ao converter coordenadas."
                 );
 
-
                 return;
             }
-
 
             ultimaLatitude =
                 lat;
 
-
             ultimaLongitude =
                 lon;
-
 
             if (
                 dataMatch.Success
@@ -957,36 +901,30 @@ class Program
                         dataMatch.Groups[1].Value
                     );
 
-
                 int mes =
                     int.Parse(
                         dataMatch.Groups[2].Value
                     );
-
 
                 int ano =
                     int.Parse(
                         dataMatch.Groups[3].Value
                     );
 
-
                 int hora =
                     int.Parse(
                         horaMatch.Groups[1].Value
                     );
-
 
                 int minuto =
                     int.Parse(
                         horaMatch.Groups[2].Value
                     );
 
-
                 int segundo =
                     int.Parse(
                         horaMatch.Groups[3].Value
                     );
-
 
                 DateTime utc =
                     new DateTime(
@@ -998,7 +936,6 @@ class Program
                         segundo,
                         DateTimeKind.Utc
                     );
-
 
                 ultimoTimestamp =
                     utc.ToString(
@@ -1013,10 +950,8 @@ class Program
                     );
             }
 
-
             gpsValido =
                 true;
-
 
             Console.WriteLine(
                 $"GPS atualizado -> " +
@@ -1034,7 +969,6 @@ class Program
         }
     }
 
-
     /* =====================================================================
        PROCESSAR LUX
        ===================================================================== */
@@ -1051,7 +985,6 @@ class Program
                     @"Lux:\s*(-?\d+[.,]?\d*)"
                 );
 
-
             if (
                 !match.Success
             )
@@ -1060,17 +993,14 @@ class Program
                     "Nao foi possivel interpretar o Lux."
                 );
 
-
                 return;
             }
-
 
             string texto =
                 match
                     .Groups[1]
                     .Value
                     .Replace(',', '.');
-
 
             if (
                 !double.TryParse(
@@ -1085,10 +1015,8 @@ class Program
                     "Erro ao converter o Lux."
                 );
 
-
                 return;
             }
-
 
             if (
                 !gpsValido
@@ -1098,16 +1026,13 @@ class Program
                     "Lux armazenado encontrado antes do primeiro GPS valido."
                 );
 
-
                 return;
             }
-
 
             double luminosidade =
                 LuxParaPercentual(
                     lux
                 );
-
 
             Medicao medicao =
                 new Medicao
@@ -1128,12 +1053,10 @@ class Program
                         ultimoTimestamp
                 };
 
-
             Console.WriteLine(
                 $"Medicao armazenada -> Lux: {lux:F2} | " +
                 $"Escala: {luminosidade:F2}"
             );
-
 
             await EnviarMedicao(
                 medicao
@@ -1149,7 +1072,6 @@ class Program
         }
     }
 
-
     /* =====================================================================
        CONVERTER LUX
        ===================================================================== */
@@ -1161,14 +1083,12 @@ class Program
         const double LUX_MAXIMO =
             1000.0;
 
-
         if (
             lux <= 0
         )
         {
             return 0;
         }
-
 
         if (
             lux >= LUX_MAXIMO
@@ -1177,13 +1097,11 @@ class Program
             return 100;
         }
 
-
         return (
             lux /
             LUX_MAXIMO
         ) * 100.0;
     }
-
 
     /* =====================================================================
        ENVIAR PARA SITE
@@ -1201,13 +1119,11 @@ class Program
                     medicao
                 );
 
-
             if (
                 resposta.IsSuccessStatusCode
             )
             {
                 medicoesRecebidasNoLote++;
-
 
                 Console.WriteLine(
                     "Servidor -> medicao registrada."
@@ -1218,7 +1134,6 @@ class Program
                 string mensagem =
                     await resposta.Content
                         .ReadAsStringAsync();
-
 
                 Console.WriteLine(
                     $"Servidor -> ERRO " +

@@ -1,2 +1,28 @@
-# Bancos locais podem conter contas, ocorrências e coordenadas reais.
+# Dependências JavaScript (restauradas com npm.cmd install)
+/node_modules/
+
+# Banco local e arquivos auxiliares do SQLite
 *.db
+*.db-shm
+*.db-wal
+*.db-journal
+
+# Configuração local
+.env
+.env.*
+!.env.example
+
+# Compilação da aplicação C#
+/C#/bin/
+/C#/obj/
+/C#/.vs/
+
+# Compilação do STM32CubeIDE (fontes e configuração do projeto permanecem no Git)
+/stm/**/Debug/
+/stm/**/Release/
+/stm/.metadata/
+
+# Logs e arquivos temporários
+*.log
+.DS_Store
+Thumbs.db
