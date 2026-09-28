@@ -39,7 +39,7 @@ As bibliotecas do mapa acompanham a aplicação. **O mapa de ruas do OpenStreetM
 1. Em **Definir iluminação**, toque na rua desejada. O ponto é associado à rua mais próxima.
 2. Escolha os lux e clique em **Salvar iluminação**. Repita para outros pontos. Isso configura o cenário, sem criar leituras ou enviar dados ao site.
 3. Para editar um ponto existente, toque no marcador. É possível alterar os lux e salvar, ou remover o ponto selecionado.
-4. Clique em **Dirigir caminhão** e toque no destino (ou no marcador de um ponto). O caminhão segue a rota pelas ruas.
+4. Clique em **Dirigir caminhão** e toque em uma ou mais ruas ou marcadores de iluminação para adicionar paradas. Confira a ordem na lista e clique em **Iniciar rota**. O caminhão percorre todas as paradas pelas ruas.
 5. Ao passar a até **20 metros** de um ponto, registra automaticamente seus lux, o GPS atual do caminhão e as coordenadas exatas do ponto de referência no microSD virtual. Se dois pontos estiverem próximos, usa o mais próximo. Registra uma vez por passagem; voltar ao ponto depois de sair da área permite outra leitura. Onde não houver ponto configurado, não inventa uma medição.
 6. Os botões de registro manual e coleta a cada segundo continuam disponíveis para leituras adicionais, quando o caminhão estiver próximo de um ponto configurado. O limite é 5000 leituras por lote.
 7. **Descarregar** pausa o caminhão e a coleta, envia o lote inteiro e só limpa o microSD após a confirmação. Os pontos de iluminação permanecem configurados para repetir a demonstração.
@@ -83,7 +83,7 @@ Para servidor principal em outra máquina, use seu IP em `LIGHTSENTINEL_URL`. O 
 ## Testes
 
 ```powershell
-node --test tests/simulador.test.js tests/navegacao.test.js
+node --test tests/*.test.js
 ```
 
 Os testes usam um banco temporário e verificam validação, recebimento integral, idempotência, concorrência, persistência e isolamento das medições reais.
@@ -91,7 +91,7 @@ Os testes usam um banco temporário e verificam validação, recebimento integra
 ## Navegação pelas ruas
 
 - O caminhão é associado a uma rua ao abrir o simulador. A coleta só é liberada após confirmar essa posição.
-- Um toque na rua cria uma rota de carro; o caminhão percorre todas as curvas, sem atravessar quarteirões em linha reta. Cliques longe de vias e rotas fora dos limites da demonstração são rejeitados.
+- Cada toque em uma rua adiciona uma parada à lista. Ao clicar em Iniciar rota, o caminhão percorre todas as paradas na ordem escolhida, fazendo as curvas pelas ruas. Cliques longe de vias e rotas fora dos limites da demonstração são rejeitados.
 - **Pausar trajeto / Continuar trajeto** controla o deslocamento. **Seguir caminhão** acompanha o veículo; arrastar o mapa libera a câmera.
 - Ritmos **1×, 3× e 6×** aceleram o tempo de viagem, com base em 30 km/h. O ritmo inicial é 3×.
 - Trocar de aba pausa o movimento e a coleta. Descarregar também pausa ambos. O trajeto não é recuperado após recarregar, mas a posição e as leituras permanecem guardadas.
@@ -105,3 +105,15 @@ Os testes usam um banco temporário e verificam validação, recebimento integra
 A prévia e o mapa simulado publicado usam `referencia.lat` e `referencia.lng`, sem arredondamento para uma grade. A referência só entra no mapa depois que o caminhão a coleta; configurar pontos não publica leituras. O halo do calor se estende ao redor dessa posição. Pontos próximos podem ter halos sobrepostos.
 
 Lotes antigos sem `referencia` mantêm o GPS original, agora sem arredondamento. Para alinhar também esses dados aos pontos configurados, faça um novo percurso e descarregue um novo lote. As leituras antigas e os envios pendentes não são reescritos, preservando a identificação e o reenvio de lotes.
+
+## Rotas com uma ou várias paradas
+
+Em **Dirigir caminhão**, clique nos pontos por onde deseja passar. Cada clique acrescenta uma parada numerada ao mapa e à lista **Monte sua rota**, com limite de 20. Para visitar apenas um ponto, adicione somente uma parada.
+
+- **↑ / ↓** alteram a ordem das paradas.
+- **×** remove uma parada.
+- **Limpar rota** apaga o planejamento e interrompe o trajeto atual, preservando os pontos de iluminação e as leituras já coletadas.
+- **Iniciar rota** calcula o caminho pelas ruas na ordem exata da lista e inicia o movimento. Não há reorganização automática das paradas.
+- **Pausar trajeto / Continuar trajeto** mantém o percurso em andamento.
+
+Adicionar, remover ou reordenar paradas interrompe o trajeto anterior; clique em Iniciar rota para recalcular a partir da posição atual. O caminhão passa pelos pontos sem aguardar manualmente em cada um e coleta os lux das referências próximas. A lista é temporária e precisa ser refeita se recarregar a página. Não cria leituras antes de o caminhão passar pelos pontos.

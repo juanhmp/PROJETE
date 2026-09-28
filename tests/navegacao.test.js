@@ -29,3 +29,22 @@ test('posição inicial é corrigida para uma rua próxima',async()=>{
  assert.deepEqual(r.posicao,esquina);
  await assert.rejects(consultar('rua',params,async()=>({ok:true,json:async()=>({code:'Ok',waypoints:[{location:esquina,distance:251}]})})),{status:422});
 });
+test('rota de várias paradas mantém a ordem e retorna todas as referências',async()=>{
+ const paradas=[destino,esquina,origem];
+ const p=new URLSearchParams({origem:origem.join(','),destinos:paradas.map(p=>p.join(',')).join(';')});
+ const r=await consultar('rota',p,async url=>{
+   assert.equal(url.pathname.split('/').pop(),[origem,...paradas].map(p=>p.join(',')).join(';'));
+   assert.equal(url.searchParams.get('radiuses'),'120;120;120;120');
+   return {ok:true,json:async()=>({code:'Ok',waypoints:[origem,...paradas].map((location,i)=>({location,distance:0,name:'Rua '+i})),routes:[{geometry:{coordinates:[origem,...paradas]}}]})};
+ });
+ assert.deepEqual(r.paradas.map(p=>[p.lng,p.lat]),paradas);
+});
+test('rejeita lista vazia, excessiva ou parada inválida antes de consultar rotas',async()=>{
+ for(const destinos of ['',Array(21).fill(destino.join(',')).join(';'),destino.join(',')+';0,0']){
+  await assert.rejects(consultar('rota',new URLSearchParams({origem:origem.join(','),destinos}),()=>{throw Error('Não deveria chamar serviço');}),{status:400});
+ }
+});
+test('rejeita resposta que omita uma das paradas escolhidas',async()=>{
+ const p=new URLSearchParams({origem:origem.join(','),destinos:[esquina,destino].map(p=>p.join(',')).join(';')});
+ await assert.rejects(consultar('rota',p,async()=>resposta([origem,esquina,destino])),{status:422});
+});

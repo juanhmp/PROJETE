@@ -17,7 +17,7 @@ window.criarIluminacao = function({mapa,travado,pausar,dirigir,aviso,atualizar})
     $('modoEditar').setAttribute('aria-pressed',String(modo==='editar'));$('modoDirigir').setAttribute('aria-pressed',String(modo==='dirigir'));
     $('pontoSelecionado').textContent=buscando?'Localizando a rua…':selecionado?`Ponto: ${selecionado.lat.toFixed(6)}, ${selecionado.lng.toFixed(6)}`:'Toque na rua para definir um ponto.';
     $('totalPontos').textContent=`${pontos.length} pontos configurados • detecção a até ${RAIO} m`;
-    $('mapHint').textContent=modo==='editar'?'1. Toque na rua, escolha os lux e salve o ponto.':'2. Toque no destino. O caminhão coleta a iluminação ao passar pelos pontos.';
+    $('mapHint').textContent=modo==='editar'?'1. Toque na rua, escolha os lux e salve o ponto.':'2. Toque nas paradas, na ordem desejada, e clique em Iniciar rota.';
   }
   function selecionar(p){
     if(travado()||invalido)return;
