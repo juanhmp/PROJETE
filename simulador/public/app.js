@@ -6,7 +6,7 @@
   const CENTRO = [-22.252, -45.704];
   const limites = [[-22.285, -45.740], [-22.220, -45.675]];
   let state = { lat: CENTRO[0], lng: CENTRO[1], lux: 20, medicoes: [], loteId: null };
-  let ocupado = false, timer = null, bloqueado = false, heat = null, areas = [];
+  let ocupado = false, timer = null, bloqueado = false, heat = null, areas = [], navegacao = null;
   function aviso(texto, erro = false) { $('mensagem').textContent = texto; $('mensagem').classList.toggle('error', erro); }
   if (!window.L || !L.heatLayer) { aviso('Não foi possível carregar o mapa. Recarregue a página.', true); return; }
   const dentro = m => Number.isFinite(m.lat) && Number.isFinite(m.lng) && m.lat >= limites[0][0] && m.lat <= limites[1][0] && m.lng >= limites[0][1] && m.lng <= limites[1][1];
@@ -25,9 +25,9 @@
   }
   function salvar(proximo) {
     try { localStorage.setItem(KEY, JSON.stringify(proximo)); state = proximo; return true; }
-    catch { parar(); aviso('Não foi possível guardar os dados no navegador. Libere espaço ou permita armazenamento antes de continuar.', true); return false; }
+    catch { parar(); navegacao?.pausar(false); aviso('Não foi possível guardar os dados no navegador. Libere espaço ou permita armazenamento antes de continuar.', true); return false; }
   }
-  const mapa = L.map('map', { maxBounds: limites, maxBoundsViscosity: 1, minZoom: 13, maxZoom: 18 }).setView(CENTRO, 14);
+  const mapa = L.map('map', { maxBounds: limites, maxBoundsViscosity: 1, minZoom: 13, maxZoom: 18, doubleClickZoom: false }).setView(CENTRO, 14);
   let tileError = false;
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19, referrerPolicy: 'origin', attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -86,24 +86,29 @@
     const site = new URL(location.href); site.port = c.portaSite; site.pathname = '/mapa-simulado'; site.search = ''; site.hash = '';
     $('voltar').href = site.href; $('voltar').textContent = 'Ver mapa publicado ↗'; $('voltar').target = '_blank'; $('voltar').rel = 'noopener';
   }).catch(() => { $('voltar').hidden = true; });
-  // Ícone SVG original de caminhão, com contorno e expressão amigável.
-  const truck = L.marker([state.lat, state.lng], { draggable: true, title: 'Caminhão LightSentinel: arraste para mudar o GPS',
-    icon: L.divIcon({ className: 'truck', iconSize: [54,54], iconAnchor: [27,42], html: `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><circle cx="32" cy="31" r="28" fill="white" stroke="#214d3b" stroke-width="2"/><path d="M10 22h27v24H10z" fill="#b6e47d" stroke="#214d3b" stroke-width="2.5" stroke-linejoin="round"/><path d="M37 28h10l8 10v8H37z" fill="#4e8960" stroke="#214d3b" stroke-width="2.5"/><path d="M41 31h5l5 7H41z" fill="#d9f4f1"/><circle cx="20" cy="47" r="6" fill="#214d3b"/><circle cx="46" cy="47" r="6" fill="#214d3b"/><circle cx="20" cy="47" r="2" fill="white"/><circle cx="46" cy="47" r="2" fill="white"/><circle cx="19" cy="30" r="2" fill="#214d3b"/><circle cx="28" cy="30" r="2" fill="#214d3b"/><path d="M19 36q5 5 9 0" fill="none" stroke="#214d3b" stroke-width="2" stroke-linecap="round"/><path d="M38 24h7" stroke="#f4c34c" stroke-width="4" stroke-linecap="round"/></svg>` })
+  // Caminhão visto de cima: gira na direção do próximo trecho da rua.
+  const truck = L.marker([state.lat, state.lng], { draggable: false, interactive: false, zIndexOffset: 1000,
+    icon: L.divIcon({ className: 'truck', iconSize: [60,60], iconAnchor: [30,30], html: `<div class="truck-heading"><svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><circle cx="32" cy="32" r="29" fill="white" fill-opacity=".93"/><path d="M32 1l6 9H26z" fill="#4c6fff"/><rect x="14" y="18" width="7" height="12" rx="3" fill="#253345"/><rect x="43" y="18" width="7" height="12" rx="3" fill="#253345"/><rect x="17" y="45" width="7" height="12" rx="3" fill="#253345"/><rect x="40" y="45" width="7" height="12" rx="3" fill="#253345"/><rect x="20" y="29" width="24" height="28" rx="5" fill="#b9e87b" stroke="#254c3b" stroke-width="2.5"/><path d="M20 27V16q0-6 6-6h12q6 0 6 6v11z" fill="#73baee" stroke="#253345" stroke-width="2.5"/><path d="M24 17h16v8H24z" fill="#e8f8ff"/><path d="M25 36h14m-14 7h14m-14 7h14" stroke="#86b650" stroke-width="2"/><rect x="21" y="9" width="6" height="3" rx="1" fill="#ffec8b"/><rect x="37" y="9" width="6" height="3" rx="1" fill="#ffec8b"/></svg></div>` })
   }).addTo(mapa);
+  navegacao = criarNavegacao({ mapa, truck, obterEstado: () => state,
+    definirPosicao(p) { state = { ...state, lat: p.lat, lng: p.lng }; $('coordenadas').textContent = `GPS ${state.lat.toFixed(6)}, ${state.lng.toFixed(6)}`; },
+    persistir: () => salvar({ ...state }), travado: () => ocupado || bloqueado || !!state.loteId,
+    atualizar: atualizarUI, aviso, pausarColeta: parar
+  });
   function atualizarUI() {
     const travado = ocupado || bloqueado || !!state.loteId;
     $('quantidade').textContent = state.medicoes.length;
     $('coordenadas').textContent = `GPS ${state.lat.toFixed(6)}, ${state.lng.toFixed(6)}`;
     $('lux').value = state.lux; $('luxRange').value = Math.min(100, state.lux);
-    $('registrar').disabled = travado || state.medicoes.length >= 5000;
-    $('automatico').disabled = travado || state.medicoes.length >= 5000;
+    $('registrar').disabled = travado || !navegacao?.pronto || navegacao.carregando || state.medicoes.length >= 5000;
+    $('automatico').disabled = $('registrar').disabled;
     $('lux').disabled = travado; $('luxRange').disabled = travado;
     document.querySelectorAll('[data-lux]').forEach(b => b.disabled = travado);
     $('descarregar').disabled = ocupado || bloqueado || state.medicoes.length === 0;
     $('descarregar').textContent = ocupado ? 'Descarregando…' : state.loteId ? 'Descarregar novamente' : 'Descarregar';
     $('automatico').textContent = timer ? 'Pausar coleta automática' : 'Iniciar coleta a cada 1 segundo';
     $('estado').textContent = ocupado ? 'ENVIANDO LOTE' : timer ? 'COLETANDO • MICROSD VIRTUAL' : 'SIMULADOR DE HARDWARE';
-    travado ? truck.dragging.disable() : truck.dragging.enable();
+    navegacao?.controles();
     truck.setLatLng([state.lat, state.lng]);
     $('leituras').replaceChildren(...state.medicoes.slice(-3).reverse().map(m => {
       const li = document.createElement('li');
@@ -112,12 +117,6 @@
     areas = agregar(state.medicoes); desenhar();
     $('mapStatus').textContent = `${state.medicoes.length} leituras no microSD virtual • Prévia local, ainda não publicada`;
   }
-  function posicionar(latlng) {
-    if (ocupado || bloqueado || state.loteId) return;
-    if (!dentro(latlng)) { truck.setLatLng([state.lat, state.lng]); aviso('Escolha um ponto dentro da área de demonstração de Santa Rita.', true); return; }
-    salvar({ ...state, lat: latlng.lat, lng: latlng.lng }); atualizarUI();
-  }
-  mapa.on('click', e => posicionar(e.latlng)); truck.on('dragend', () => posicionar(truck.getLatLng()));
   function ajustarLux(valor) {
     if (ocupado || bloqueado || state.loteId) return;
     if (valor === '' || !Number.isFinite(Number(valor)) || Number(valor) < 0 || Number(valor) > 88000) {
@@ -129,7 +128,7 @@
   $('luxRange').oninput = e => ajustarLux(e.target.value);
   document.querySelectorAll('[data-lux]').forEach(b => b.onclick = () => ajustarLux(b.dataset.lux));
   function registrar() {
-    if (ocupado || bloqueado || state.loteId) return;
+    if (ocupado || bloqueado || state.loteId || !navegacao.pronto || navegacao.carregando) return;
     if (state.medicoes.length >= 5000) { parar(); aviso('MicroSD virtual cheio (5000 leituras). Descarregue para continuar.', true); return; }
     if (!ajustarLux($('lux').value)) { parar(); return; }
     const leitura = { lat: state.lat, lng: state.lng, lux: state.lux, timestamp: new Date().toISOString() };
@@ -150,7 +149,7 @@
   };
   $('descarregar').onclick = async () => {
     if (ocupado || bloqueado || !state.medicoes.length) return;
-    parar();
+    parar(); navegacao.pausar();
     // getRandomValues também funciona em HTTP pelo IP do computador, sem exigir HTTPS.
     if (!state.loteId) {
       const bytes = crypto.getRandomValues(new Uint8Array(16));
@@ -165,11 +164,11 @@
       if (!r.ok || !d.sucesso || d.loteId !== state.loteId || d.quantidade !== state.medicoes.length) throw new Error(d.mensagem || 'O servidor não confirmou o lote completo.');
       if (salvar({ ...state, medicoes: [], loteId: null })) aviso(`${d.quantidade} leituras descarregadas! MicroSD virtual vazio e mapa simulado atualizado. Você pode iniciar uma nova coleta.`);
     } catch (e) { aviso(`${e.message || 'Falha no envio.'} Leituras preservadas. Use “Descarregar novamente” antes de iniciar outra coleta.`, true); }
-    finally { ocupado = false; atualizarUI(); }
+    finally { ocupado = false; atualizarUI(); navegacao.inicializar(); }
   };
   // Uma segunda aba não deve sobrescrever leituras que outra aba acabou de guardar.
   window.addEventListener('storage', e => {
-    if (e.key === KEY || e.key === null) { bloqueado = true; parar(); atualizarUI(); aviso('Outra aba alterou o microSD virtual. Recarregue esta página antes de continuar.', true); }
+    if (e.key === KEY || e.key === null) { bloqueado = true; parar(); navegacao.pausar(false); atualizarUI(); aviso('Outra aba alterou o microSD virtual. Recarregue esta página antes de continuar.', true); }
   });
   window.addEventListener('pagehide', parar);
   atualizarUI();

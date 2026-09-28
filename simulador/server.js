@@ -4,12 +4,25 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const { consultar } = require('./rotas');
 const PORT = Number(process.env.SIMULADOR_PORT || 3001);
 const DESTINO = new URL(process.env.LIGHTSENTINEL_URL || 'http://127.0.0.1:3000');
 const PUBLIC = path.join(__dirname, 'public');
 const tipos = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png' };
 const server = http.createServer(async (req, res) => {
-  const pathname = new URL(req.url, 'http://localhost').pathname;
+  const urlLocal = new URL(req.url, 'http://localhost');
+  const pathname = urlLocal.pathname;
+  if (req.method === 'GET' && ['/api/navegacao/rota', '/api/navegacao/rua'].includes(pathname)) {
+    try {
+      const dados = await consultar(pathname.endsWith('/rota') ? 'rota' : 'rua', urlLocal.searchParams);
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+      res.end(JSON.stringify(dados));
+    } catch (e) {
+      res.writeHead(e.status || 503, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ mensagem: e.message }));
+    }
+    return;
+  }
   if ((req.method === 'POST' && pathname === '/api/simulacao/descarregar') ||
       (req.method === 'GET' && pathname === '/api/simulacao/mapa')) {
     try {

@@ -36,11 +36,11 @@ As bibliotecas do mapa acompanham a aplicação. **O mapa de ruas do OpenStreetM
 
 ## Demonstrar o hardware
 
-1. Toque no mapa para posicionar o caminhão ou arraste seu ícone. A área de demonstração usa os mesmos limites retangulares do mapa atual de Santa Rita (não é uma delimitação oficial do município).
+1. Toque uma vez na rua de destino: o caminhão calcula e percorre uma rota pelas vias. O ícone acompanha a direção das curvas. A área de demonstração usa os mesmos limites retangulares do mapa atual de Santa Rita (não é uma delimitação oficial do município).
 2. Digite os **lux** ou use os controles rápidos. O campo aceita 0 a 88000 lux; o controle deslizante cobre 0 a 100.
-3. Toque em **Registrar leitura**. Para leituras repetidas, toque em **Iniciar coleta a cada 1 segundo** e mova o caminhão pelo mapa. A posição fica estática até você movê-la; não há deslocamento automático nem GPS real.
-4. A prévia e o contador mostram o que está no microSD virtual. A coleta automática pode repetir a mesma posição, como um veículo parado. O limite é 5000 leituras por lote.
-5. Toque em **Descarregar**. A coleta para e todas as leituras são enviadas juntas.
+3. Toque em **Registrar leitura**. Para leituras repetidas, toque em **Iniciar coleta a cada 1 segundo** durante o trajeto. O GPS é simulado ao longo da geometria completa da rua; não usa o GPS físico.
+4. A prévia e o contador mostram o que está no microSD virtual. A coleta automática pode repetir a mesma posição quando o veículo está parado. Ao escolher outro destino, a coleta pausa durante o cálculo e deve ser reativada. O limite é 5000 leituras por lote.
+5. Toque em **Descarregar**. O caminhão e a coleta param e todas as leituras são enviadas juntas.
 6. Somente após o servidor confirmar o lote inteiro, o microSD virtual é esvaziado. O mapa simulado do site atualiza em até 3 segundos e mostra somente o último lote.
 7. Inicie outra coleta quando quiser. Ela não recomeça automaticamente após o envio.
 
@@ -79,7 +79,19 @@ Para servidor principal em outra máquina, use seu IP em `LIGHTSENTINEL_URL`. O 
 ## Testes
 
 ```powershell
-node --test tests/simulador.test.js
+node --test tests/simulador.test.js tests/navegacao.test.js
 ```
 
 Os testes usam um banco temporário e verificam validação, recebimento integral, idempotência, concorrência, persistência e isolamento das medições reais.
+
+## Navegação pelas ruas
+
+- O caminhão é associado a uma rua ao abrir o simulador. A coleta só é liberada após confirmar essa posição.
+- Um toque na rua cria uma rota de carro; o caminhão percorre todas as curvas, sem atravessar quarteirões em linha reta. Cliques longe de vias e rotas fora dos limites da demonstração são rejeitados.
+- **Pausar trajeto / Continuar trajeto** controla o deslocamento. **Seguir caminhão** acompanha o veículo; arrastar o mapa libera a câmera.
+- Ritmos **1×, 3× e 6×** aceleram o tempo de viagem, com base em 30 km/h. O ritmo inicial é 3×.
+- Trocar de aba pausa o movimento e a coleta. Descarregar também pausa ambos. O trajeto não é recuperado após recarregar, mas a posição e as leituras permanecem guardadas.
+- O serviço público OSRM calcula rotas usando ruas do OpenStreetMap. Requer internet e está sujeito a indisponibilidade. Se falhar, o caminhão fica parado e as leituras são preservadas; não há substituição por um trajeto em linha reta.
+- As ruas e sentidos dependem da cartografia disponível. É uma demonstração de carro, sem considerar restrições específicas de caminhões.
+- Para uma instância OSRM própria, configure `OSRM_URL` no computador do simulador. A configuração padrão é `https://router.project-osrm.org`.
+- Referência da API: https://project-osrm.org/docs/v5.24.0/api/
