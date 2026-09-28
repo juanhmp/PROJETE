@@ -495,6 +495,8 @@ app.get('/api/dashboard', exigirAdmin, async (req, res) => {
     res.status(500).json({ mensagem: 'Erro ao carregar dashboard.' });
   }
 });
+// Funcionalidade da feira: rotas e tabelas independentes das medições reais.
+require('./simulador/integracao')(app);
 app.use((req, res) => res.status(404).json({ mensagem: 'Rota não encontrada.' }));
 iniciarBanco()
   .then(() => app.listen(PORT, () => console.log(`Servidor rodando em http://localhost:${PORT}`)))
