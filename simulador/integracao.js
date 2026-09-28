@@ -4,6 +4,7 @@ const path = require('path');
 const crypto = require('crypto');
 const sqlite3 = require('sqlite3').verbose();
 const express = require('express');
+const agregarAreas = require('./public/areas');
 const LIMITES = { sul: -22.285, norte: -22.220, oeste: -45.740, leste: -45.675 };
 
 function validarLote(body) {
@@ -19,7 +20,16 @@ function validarLote(body) {
       m.lux < 0 || m.lux > 88000 || typeof m.timestamp !== 'string' || !Number.isFinite(Date.parse(m.timestamp))) {
       throw new Error('Leitura inválida: confira a área de demonstração, os lux (0 a 88000) e a data.');
     }
-    return { lat: m.lat, lng: m.lng, lux: m.lux, timestamp: new Date(m.timestamp).toISOString() };
+    const leitura = { lat: m.lat, lng: m.lng, lux: m.lux, timestamp: new Date(m.timestamp).toISOString() };
+    if (m.referencia !== undefined) {
+      const p = m.referencia;
+      if (!p || !Number.isFinite(p.lat) || !Number.isFinite(p.lng) ||
+          p.lat < LIMITES.sul || p.lat > LIMITES.norte || p.lng < LIMITES.oeste || p.lng > LIMITES.leste) {
+        throw new Error('Coordenadas do ponto de referência inválidas.');
+      }
+      leitura.referencia = { lat: p.lat, lng: p.lng };
+    }
+    return leitura;
   });
 }
 
@@ -55,15 +65,8 @@ function criarBanco(arquivo) {
       const lote = await get('SELECT * FROM simulacao_lotes ORDER BY sequencia DESC LIMIT 1');
       if (!lote) return { loteId: null, totalLeituras: 0, areas: [], recebidoEm: null };
       const medicoes = JSON.parse(lote.medicoes);
-      const celulas = new Map();
-      for (const m of medicoes) {
-        const lat = Math.round(m.lat * 500) / 500, lng = Math.round(m.lng * 500) / 500;
-        const key = `${lat},${lng}`;
-        const a = celulas.get(key) || { lat, lng, soma: 0, quantidade: 0 };
-        a.soma += m.lux; a.quantidade++; celulas.set(key, a);
-      }
       return { loteId: lote.lote_id, recebidoEm: lote.recebido_em, totalLeituras: medicoes.length,
-        areas: [...celulas.values()].map(a => ({ lat: a.lat, lng: a.lng, lux: a.soma / a.quantidade, quantidade: a.quantidade })) };
+        areas: agregarAreas(medicoes) };
     },
     close: () => new Promise((resolve, reject) => db.close(e => e ? reject(e) : resolve()))
   };

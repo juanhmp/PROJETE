@@ -10,7 +10,7 @@
   function aviso(texto, erro = false) { $('mensagem').textContent = texto; $('mensagem').classList.toggle('error', erro); }
   if (!window.L || !L.heatLayer) { aviso('Não foi possível carregar o mapa. Recarregue a página.', true); return; }
   const dentro = m => Number.isFinite(m.lat) && Number.isFinite(m.lng) && m.lat >= limites[0][0] && m.lat <= limites[1][0] && m.lng >= limites[0][1] && m.lng <= limites[1][1];
-  const leituraValida = m => m && dentro(m) && Number.isFinite(m.lux) && m.lux >= 0 && m.lux <= 88000 && typeof m.timestamp === 'string' && Number.isFinite(Date.parse(m.timestamp));
+  const leituraValida = m => m && dentro(m) && Number.isFinite(m.lux) && m.lux >= 0 && m.lux <= 88000 && typeof m.timestamp === 'string' && Number.isFinite(Date.parse(m.timestamp)) && (m.referencia === undefined || (m.referencia && dentro(m.referencia)));
   if (!viewer) {
     try {
       const salvo = localStorage.getItem(KEY);
@@ -46,15 +46,6 @@
     }).addTo(mapa);
   }
   mapa.on('zoomend', desenhar);
-  function agregar(medicoes) {
-    const grupos = new Map();
-    for (const m of medicoes) {
-      const lat = Math.round(m.lat * 500) / 500, lng = Math.round(m.lng * 500) / 500;
-      const chave = `${lat},${lng}`, a = grupos.get(chave) || { lat, lng, lux: 0, quantidade: 0 };
-      a.lux += m.lux; a.quantidade++; grupos.set(chave, a);
-    }
-    return [...grupos.values()].map(a => ({ ...a, lux: a.lux / a.quantidade }));
-  }
   $('centralizar').onclick = () => mapa.setView(viewer ? CENTRO : [state.lat, state.lng], 14);
   if (viewer) {
     document.body.classList.add('viewer');
@@ -76,8 +67,12 @@
       finally { carregando = false; }
     }
     mapa.on('click', e => {
-      const lat = Math.round(e.latlng.lat * 500) / 500, lng = Math.round(e.latlng.lng * 500) / 500;
-      const a = areas.find(a => Math.abs(a.lat - lat) < .000001 && Math.abs(a.lng - lng) < .000001);
+      const clique = mapa.latLngToContainerPoint(e.latlng);
+      let a = null, menor = 30;
+      for (const area of areas) {
+        const distancia = mapa.latLngToContainerPoint([area.lat,area.lng]).distanceTo(clique);
+        if (distancia < menor) { menor = distancia; a = area; }
+      }
       L.popup().setLatLng(e.latlng).setContent(a ? `<strong>${a.lux.toFixed(1)} lux</strong><br>${a.quantidade} leituras nesta área` : 'Sem leituras nesta área.').openOn(mapa);
     });
     atualizar(); setInterval(atualizar, 3000); return;
@@ -132,7 +127,7 @@
       const li = document.createElement('li');
       li.textContent = `${m.lat.toFixed(4)}, ${m.lng.toFixed(4)} • ${m.lux} lux`; return li;
     }));
-    areas = agregar(state.medicoes); desenhar();
+    areas = agregarAreasSimuladas(state.medicoes); desenhar();
     $('mapStatus').textContent = `${state.medicoes.length} leituras no microSD virtual • Prévia local, ainda não publicada`;
   }
   function ajustarLux(valor) {
@@ -148,8 +143,10 @@
   function registrar() {
     if (ocupado || bloqueado || state.loteId || !navegacao.pronto || navegacao.carregando || iluminacao.editando || iluminacao.invalido) return;
     if (state.medicoes.length >= 5000) { parar(); navegacao.pausar(); aviso('MicroSD virtual cheio (5000 leituras). Descarregue para continuar.', true); return; }
-    if (!atualizarSensor()) return;
-    const leitura = { lat: state.lat, lng: state.lng, lux: state.lux, timestamp: new Date().toISOString() };
+    const ponto = atualizarSensor();
+    if (!ponto) return;
+    const leitura = { lat: state.lat, lng: state.lng, lux: ponto.lux, timestamp: new Date().toISOString(),
+      referencia: { lat: ponto.lat, lng: ponto.lng } };
     if (salvar({ ...state, medicoes: [...state.medicoes, leitura] })) {
       aviso('Leitura guardada no microSD virtual.');
       if (state.medicoes.length >= 5000) { parar(); navegacao.pausar(); aviso('MicroSD virtual cheio. Descarregue para continuar.'); }

@@ -40,7 +40,7 @@ As bibliotecas do mapa acompanham a aplicação. **O mapa de ruas do OpenStreetM
 2. Escolha os lux e clique em **Salvar iluminação**. Repita para outros pontos. Isso configura o cenário, sem criar leituras ou enviar dados ao site.
 3. Para editar um ponto existente, toque no marcador. É possível alterar os lux e salvar, ou remover o ponto selecionado.
 4. Clique em **Dirigir caminhão** e toque no destino (ou no marcador de um ponto). O caminhão segue a rota pelas ruas.
-5. Ao passar a até **20 metros** de um ponto, registra automaticamente seus lux e a posição atual no microSD virtual. Se dois pontos estiverem próximos, usa o mais próximo. Registra uma vez por passagem; voltar ao ponto depois de sair da área permite outra leitura. Onde não houver ponto configurado, não inventa uma medição.
+5. Ao passar a até **20 metros** de um ponto, registra automaticamente seus lux, o GPS atual do caminhão e as coordenadas exatas do ponto de referência no microSD virtual. Se dois pontos estiverem próximos, usa o mais próximo. Registra uma vez por passagem; voltar ao ponto depois de sair da área permite outra leitura. Onde não houver ponto configurado, não inventa uma medição.
 6. Os botões de registro manual e coleta a cada segundo continuam disponíveis para leituras adicionais, quando o caminhão estiver próximo de um ponto configurado. O limite é 5000 leituras por lote.
 7. **Descarregar** pausa o caminhão e a coleta, envia o lote inteiro e só limpa o microSD após a confirmação. Os pontos de iluminação permanecem configurados para repetir a demonstração.
 8. O mapa simulado da porta 3000 mostra o último lote recebido, com atualização a cada 3 segundos. O cenário configurado permanece apenas no simulador.
@@ -52,7 +52,7 @@ Se o envio falhar, as leituras permanecem guardadas. Use **Descarregar novamente
 - **Pontos de iluminação:** `localStorage`, chave `lightsentinel.iluminacao.v1`, até 500 pontos por navegador. Persistem após recarregar e descarregar; limpar o armazenamento do navegador os remove.
 - **Antes de descarregar:** `localStorage` do navegador do tablet, chave `lightsentinel.microsd.v1`. Fechar/reabrir ou recarregar preserva as leituras. Mantenha o mesmo navegador e endereço IP/porta; limpar os dados do navegador apaga o microSD virtual. Não use modo privado na apresentação.
 - **Depois de descarregar:** tabela exclusiva `simulacao_lotes` no `dados.db` existente. Cada linha guarda um lote completo em JSON, seu hash e a data de recebimento. Uma única escrita SQL torna o recebimento atômico.
-- Os lotes antigos ficam guardados para reconhecer reenvios. O mapa usa o último lote novo e agrupa as leituras em células de aproximadamente 200 metros, como o mapa atual.
+- Os lotes antigos ficam guardados para reconhecer reenvios. O mapa usa o último lote novo e mantém as coordenadas exatas de cada ponto de referência. Somente leituras do mesmo ponto são agrupadas; o GPS do caminhão fica preservado separadamente em `lat`/`lng`.
 - Lux originais são preservados. A escala colorida entre 0 e 100 lux é ilustrativa, limitada apenas para desenhar o calor; não representa uma classificação normativa. Sobreposição de áreas influencia a cor. Toque na área no mapa publicado para consultar o valor médio exato.
 
 ## Integração preservada
@@ -99,3 +99,9 @@ Os testes usam um banco temporário e verificam validação, recebimento integra
 - As ruas e sentidos dependem da cartografia disponível. É uma demonstração de carro, sem considerar restrições específicas de caminhões.
 - Para uma instância OSRM própria, configure `OSRM_URL` no computador do simulador. A configuração padrão é `https://router.project-osrm.org`.
 - Referência da API: https://project-osrm.org/docs/v5.24.0/api/
+
+## Posição das manchas de calor
+
+A prévia e o mapa simulado publicado usam `referencia.lat` e `referencia.lng`, sem arredondamento para uma grade. A referência só entra no mapa depois que o caminhão a coleta; configurar pontos não publica leituras. O halo do calor se estende ao redor dessa posição. Pontos próximos podem ter halos sobrepostos.
+
+Lotes antigos sem `referencia` mantêm o GPS original, agora sem arredondamento. Para alinhar também esses dados aos pontos configurados, faça um novo percurso e descarregue um novo lote. As leituras antigas e os envios pendentes não são reescritos, preservando a identificação e o reenvio de lotes.
