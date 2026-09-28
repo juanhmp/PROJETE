@@ -36,24 +36,28 @@ As bibliotecas do mapa acompanham a aplicação. **O mapa de ruas do OpenStreetM
 
 ## Demonstrar o hardware
 
-1. Toque uma vez na rua de destino: o caminhão calcula e percorre uma rota pelas vias. O ícone acompanha a direção das curvas. A área de demonstração usa os mesmos limites retangulares do mapa atual de Santa Rita (não é uma delimitação oficial do município).
-2. Digite os **lux** ou use os controles rápidos. O campo aceita 0 a 88000 lux; o controle deslizante cobre 0 a 100.
-3. Toque em **Registrar leitura**. Para leituras repetidas, toque em **Iniciar coleta a cada 1 segundo** durante o trajeto. O GPS é simulado ao longo da geometria completa da rua; não usa o GPS físico.
-4. A prévia e o contador mostram o que está no microSD virtual. A coleta automática pode repetir a mesma posição quando o veículo está parado. Ao escolher outro destino, a coleta pausa durante o cálculo e deve ser reativada. O limite é 5000 leituras por lote.
-5. Toque em **Descarregar**. O caminhão e a coleta param e todas as leituras são enviadas juntas.
-6. Somente após o servidor confirmar o lote inteiro, o microSD virtual é esvaziado. O mapa simulado do site atualiza em até 3 segundos e mostra somente o último lote.
-7. Inicie outra coleta quando quiser. Ela não recomeça automaticamente após o envio.
+1. Em **Definir iluminação**, toque na rua desejada. O ponto é associado à rua mais próxima.
+2. Escolha os lux e clique em **Salvar iluminação**. Repita para outros pontos. Isso configura o cenário, sem criar leituras ou enviar dados ao site.
+3. Para editar um ponto existente, toque no marcador. É possível alterar os lux e salvar, ou remover o ponto selecionado.
+4. Clique em **Dirigir caminhão** e toque no destino (ou no marcador de um ponto). O caminhão segue a rota pelas ruas.
+5. Ao passar a até **20 metros** de um ponto, registra automaticamente seus lux e a posição atual no microSD virtual. Se dois pontos estiverem próximos, usa o mais próximo. Registra uma vez por passagem; voltar ao ponto depois de sair da área permite outra leitura. Onde não houver ponto configurado, não inventa uma medição.
+6. Os botões de registro manual e coleta a cada segundo continuam disponíveis para leituras adicionais, quando o caminhão estiver próximo de um ponto configurado. O limite é 5000 leituras por lote.
+7. **Descarregar** pausa o caminhão e a coleta, envia o lote inteiro e só limpa o microSD após a confirmação. Os pontos de iluminação permanecem configurados para repetir a demonstração.
+8. O mapa simulado da porta 3000 mostra o último lote recebido, com atualização a cada 3 segundos. O cenário configurado permanece apenas no simulador.
 
-Se a rede ou o servidor falhar, as leituras e a identificação do lote permanecem salvas. Use **Descarregar novamente**; a API reconhece o mesmo lote sem duplicá-lo. A coleta fica pausada até resolver o envio. Reenviar um lote antigo já confirmado não substitui o mapa de um lote mais recente.
+Se o envio falhar, as leituras permanecem guardadas. Use **Descarregar novamente**; o mesmo lote não será duplicado. A coleta fica pausada até concluir o envio.
 
 ## Onde ficam os dados
 
+- **Pontos de iluminação:** `localStorage`, chave `lightsentinel.iluminacao.v1`, até 500 pontos por navegador. Persistem após recarregar e descarregar; limpar o armazenamento do navegador os remove.
 - **Antes de descarregar:** `localStorage` do navegador do tablet, chave `lightsentinel.microsd.v1`. Fechar/reabrir ou recarregar preserva as leituras. Mantenha o mesmo navegador e endereço IP/porta; limpar os dados do navegador apaga o microSD virtual. Não use modo privado na apresentação.
 - **Depois de descarregar:** tabela exclusiva `simulacao_lotes` no `dados.db` existente. Cada linha guarda um lote completo em JSON, seu hash e a data de recebimento. Uma única escrita SQL torna o recebimento atômico.
 - Os lotes antigos ficam guardados para reconhecer reenvios. O mapa usa o último lote novo e agrupa as leituras em células de aproximadamente 200 metros, como o mapa atual.
 - Lux originais são preservados. A escala colorida entre 0 e 100 lux é ilustrativa, limitada apenas para desenhar o calor; não representa uma classificação normativa. Sobreposição de áreas influencia a cor. Toque na área no mapa publicado para consultar o valor médio exato.
 
 ## Integração preservada
+
+Nesta atualização, `pages/mapa.html` recebe apenas a troca do azul para `#0000ff` (mapa e legenda). O mapa simulado usa o mesmo azul.
 
 A única adição em `app.js` carrega `simulador/integracao.js` antes do 404. A única adição em `pages/usuario.html` é o novo cartão. `banco.js`, firmware, C#, mapa real, autenticação, ocorrências e rotas de medições reais permanecem sem alterações.
 

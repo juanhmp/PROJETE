@@ -6,7 +6,7 @@
   const CENTRO = [-22.252, -45.704];
   const limites = [[-22.285, -45.740], [-22.220, -45.675]];
   let state = { lat: CENTRO[0], lng: CENTRO[1], lux: 20, medicoes: [], loteId: null };
-  let ocupado = false, timer = null, bloqueado = false, heat = null, areas = [], navegacao = null;
+  let ocupado = false, timer = null, bloqueado = false, heat = null, areas = [], navegacao = null, iluminacao = null, ultimoPontoColetado = null;
   function aviso(texto, erro = false) { $('mensagem').textContent = texto; $('mensagem').classList.toggle('error', erro); }
   if (!window.L || !L.heatLayer) { aviso('Não foi possível carregar o mapa. Recarregue a página.', true); return; }
   const dentro = m => Number.isFinite(m.lat) && Number.isFinite(m.lng) && m.lat >= limites[0][0] && m.lat <= limites[1][0] && m.lng >= limites[0][1] && m.lng <= limites[1][1];
@@ -42,7 +42,7 @@
     const pontos = areas.map(a => [a.lat, a.lng, Math.max(.08, Math.min(.95, 1 - a.lux / 100))]);
     heat = L.heatLayer(pontos, { radius: 22 + (mapa.getZoom() - 13) * 5, blur: 20, max: .95,
       maxZoom: 14, minOpacity: .20, pane: 'heatPane',
-      gradient: { .12: '#2563eb', .32: '#06b6d4', .50: '#22c55e', .67: '#eab308', .82: '#f97316', 1: '#ef4444' }
+      gradient: { .12: '#0000ff', .32: '#06b6d4', .50: '#22c55e', .67: '#eab308', .82: '#f97316', 1: '#ef4444' }
     }).addTo(mapa);
   }
   mapa.on('zoomend', desenhar);
@@ -90,17 +90,35 @@
   const truck = L.marker([state.lat, state.lng], { draggable: false, interactive: false, zIndexOffset: 1000,
     icon: L.divIcon({ className: 'truck', iconSize: [60,60], iconAnchor: [30,30], html: `<div class="truck-heading"><svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><circle cx="32" cy="32" r="29" fill="white" fill-opacity=".93"/><path d="M32 1l6 9H26z" fill="#4c6fff"/><rect x="14" y="18" width="7" height="12" rx="3" fill="#253345"/><rect x="43" y="18" width="7" height="12" rx="3" fill="#253345"/><rect x="17" y="45" width="7" height="12" rx="3" fill="#253345"/><rect x="40" y="45" width="7" height="12" rx="3" fill="#253345"/><rect x="20" y="29" width="24" height="28" rx="5" fill="#b9e87b" stroke="#254c3b" stroke-width="2.5"/><path d="M20 27V16q0-6 6-6h12q6 0 6 6v11z" fill="#73baee" stroke="#253345" stroke-width="2.5"/><path d="M24 17h16v8H24z" fill="#e8f8ff"/><path d="M25 36h14m-14 7h14m-14 7h14" stroke="#86b650" stroke-width="2"/><rect x="21" y="9" width="6" height="3" rx="1" fill="#ffec8b"/><rect x="37" y="9" width="6" height="3" rx="1" fill="#ffec8b"/></svg></div>` })
   }).addTo(mapa);
+  iluminacao = criarIluminacao({ mapa,
+    travado: () => ocupado || bloqueado || !!state.loteId,
+    pausar: () => { parar(); navegacao?.pausar(); },
+    dirigir: p => navegacao?.destino(p), aviso,
+    atualizar: () => { ultimoPontoColetado = null; atualizarUI(); if (!iluminacao?.editando) navegacao?.inicializar(); }
+  });
+  function atualizarSensor() {
+    const ponto = iluminacao.sensor(state);
+    state = { ...state, lux: ponto ? ponto.lux : 0 };
+    $('sensorAtual').textContent = ponto ? `${ponto.lux} lux no local do caminhão` : 'Sem ponto de iluminação próximo';
+    return ponto;
+  }
   navegacao = criarNavegacao({ mapa, truck, obterEstado: () => state,
-    definirPosicao(p) { state = { ...state, lat: p.lat, lng: p.lng }; $('coordenadas').textContent = `GPS ${state.lat.toFixed(6)}, ${state.lng.toFixed(6)}`; },
-    persistir: () => salvar({ ...state }), travado: () => ocupado || bloqueado || !!state.loteId,
-    atualizar: atualizarUI, aviso, pausarColeta: parar
+    definirPosicao(p) { state = { ...state, lat: p.lat, lng: p.lng }; $('coordenadas').textContent = `GPS ${state.lat.toFixed(6)}, ${state.lng.toFixed(6)}`; atualizarSensor(); },
+    persistir: () => salvar({ ...state }), travado: () => ocupado || bloqueado || !!state.loteId || iluminacao.editando || iluminacao.invalido,
+    atualizar: atualizarUI, aviso, pausarColeta: parar,
+    cliqueMapa: p => iluminacao.clique(p),
+    aoMover() {
+      const ponto = atualizarSensor();
+      if (!ponto) { ultimoPontoColetado = null; return; }
+      if (ponto.id !== ultimoPontoColetado && registrar()) ultimoPontoColetado = ponto.id;
+    }
   });
   function atualizarUI() {
     const travado = ocupado || bloqueado || !!state.loteId;
     $('quantidade').textContent = state.medicoes.length;
     $('coordenadas').textContent = `GPS ${state.lat.toFixed(6)}, ${state.lng.toFixed(6)}`;
-    $('lux').value = state.lux; $('luxRange').value = Math.min(100, state.lux);
-    $('registrar').disabled = travado || !navegacao?.pronto || navegacao.carregando || state.medicoes.length >= 5000;
+    atualizarSensor(); iluminacao?.controles();
+    $('registrar').disabled = travado || iluminacao.editando || iluminacao.invalido || !iluminacao.sensor(state) || !navegacao?.pronto || navegacao.carregando || state.medicoes.length >= 5000;
     $('automatico').disabled = $('registrar').disabled;
     $('lux').disabled = travado; $('luxRange').disabled = travado;
     document.querySelectorAll('[data-lux]').forEach(b => b.disabled = travado);
@@ -122,19 +140,19 @@
     if (valor === '' || !Number.isFinite(Number(valor)) || Number(valor) < 0 || Number(valor) > 88000) {
       aviso('Informe uma iluminação entre 0 e 88000 lux.', true); return false;
     }
-    const ok = salvar({ ...state, lux: Number(valor) }); if (ok) atualizarUI(); return ok;
+    $('lux').value = Number(valor); $('luxRange').value = Math.min(100, Number(valor)); return true;
   }
   $('lux').onchange = e => ajustarLux(e.target.value);
   $('luxRange').oninput = e => ajustarLux(e.target.value);
   document.querySelectorAll('[data-lux]').forEach(b => b.onclick = () => ajustarLux(b.dataset.lux));
   function registrar() {
-    if (ocupado || bloqueado || state.loteId || !navegacao.pronto || navegacao.carregando) return;
-    if (state.medicoes.length >= 5000) { parar(); aviso('MicroSD virtual cheio (5000 leituras). Descarregue para continuar.', true); return; }
-    if (!ajustarLux($('lux').value)) { parar(); return; }
+    if (ocupado || bloqueado || state.loteId || !navegacao.pronto || navegacao.carregando || iluminacao.editando || iluminacao.invalido) return;
+    if (state.medicoes.length >= 5000) { parar(); navegacao.pausar(); aviso('MicroSD virtual cheio (5000 leituras). Descarregue para continuar.', true); return; }
+    if (!atualizarSensor()) return;
     const leitura = { lat: state.lat, lng: state.lng, lux: state.lux, timestamp: new Date().toISOString() };
     if (salvar({ ...state, medicoes: [...state.medicoes, leitura] })) {
       aviso('Leitura guardada no microSD virtual.');
-      if (state.medicoes.length >= 5000) { parar(); aviso('MicroSD virtual cheio. Descarregue para continuar.'); }
+      if (state.medicoes.length >= 5000) { parar(); navegacao.pausar(); aviso('MicroSD virtual cheio. Descarregue para continuar.'); }
       atualizarUI();
       return true;
     }

@@ -1,5 +1,5 @@
 'use strict';
-window.criarNavegacao = function({ mapa, truck, obterEstado, definirPosicao, persistir, travado, atualizar, aviso, pausarColeta }) {
+window.criarNavegacao = function({ mapa, truck, obterEstado, definirPosicao, persistir, travado, atualizar, aviso, pausarColeta, cliqueMapa, aoMover }) {
   const $ = id => document.getElementById(id);
   let pronto=false, carregando=false, andando=false, seguir=true, rota=null, metros=0;
   let frame=0, anterior=0, ultimoSave=0, ultimaCamera=0, camada=null, alvo=null, pedido=0;
@@ -30,6 +30,8 @@ window.criarNavegacao = function({ mapa, truck, obterEstado, definirPosicao, per
     const dt=Math.min(.15,(agora-anterior)/1000);anterior=agora;
     metros=Math.min(rota.total,metros+dt*(30/3.6)*Number($('velocidade').value));
     gps(Percurso.posicao(rota,metros));
+    aoMover?.();
+    if(!andando)return;
     $('distanciaRota').textContent=`${Math.ceil(rota.total-metros)} m restantes • 30 km/h • ${$('velocidade').value}×`;
     if(seguir && agora-ultimaCamera>200){mapa.panTo(truck.getLatLng(),{animate:false});ultimaCamera=agora;}
     if(agora-ultimoSave>1000){ultimoSave=agora;if(!persistir()){pausar(false);return;}}
@@ -83,11 +85,11 @@ window.criarNavegacao = function({ mapa, truck, obterEstado, definirPosicao, per
       $('instrucaoRota').textContent='Destino: '+d.destino;
       $('distanciaRota').textContent=`${Math.round(rota.total)} m pelas ruas`;
       carregando=false;seguir=true;mapa.setView(truck.getLatLng(),Math.max(16,mapa.getZoom()));
-      continuar();aviso('Caminhão seguindo a rota. Ative a coleta automática para guardar leituras durante o trajeto.');
+      continuar();aviso('Caminhão seguindo a rota. Os lux serão registrados ao passar pelos pontos configurados.');
     }catch(e){if(id===pedido){$('instrucaoRota').textContent='Não foi possível traçar esse caminho';aviso(e.name==='AbortError'?'O cálculo demorou. Toque novamente na rua.':e.message,true);}}
     finally{if(id===pedido){carregando=false;atualizar();}}
   }
-  mapa.on('click',e=>destino(e.latlng));
+  mapa.on('click',e=>{if(!cliqueMapa?.(e.latlng))destino(e.latlng);});
   mapa.on('dragstart',()=>{seguir=false;controles();});
   $('pausarTrajeto').onclick=()=>andando?pausar():continuar();
   $('seguir').onclick=()=>{seguir=!seguir;if(seguir)mapa.panTo(truck.getLatLng());controles();};
@@ -96,7 +98,7 @@ window.criarNavegacao = function({ mapa, truck, obterEstado, definirPosicao, per
   window.addEventListener('pagehide',()=>pararTudo());
   // A posição só fica habilitada para coleta após ser associada a uma rua.
   truck.setOpacity(.4);
-  const resultado={get pronto(){return pronto;},get carregando(){return carregando;},pausar:pararTudo,controles,inicializar};
+  const resultado={get pronto(){return pronto;},get carregando(){return carregando;},pausar:pararTudo,controles,inicializar,destino};
   setTimeout(inicializar,0);
   return resultado;
 };
