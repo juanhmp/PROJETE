@@ -56,7 +56,7 @@ window.criarIluminacao = function ({ mapa, travado, pausar, dirigir, aviso, atua
     }
   }
   function cor(lux) {
-    return lux >= 80 ? '#0000ff' : lux >= 50 ? '#22c55e' : lux >= 20 ? '#eab308' : '#ef4444';
+    return lux >= 80 ? '#00008b' : lux >= 50 ? '#22c55e' : lux >= 20 ? '#eab308' : '#ef4444';
   }
   function controles() {
     const lock = travado() || invalido || buscando;

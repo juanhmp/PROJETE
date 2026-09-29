@@ -432,7 +432,7 @@ Se o envio falhar, as leituras permanecem guardadas. Use **Descarregar novamente
 
 ## Integração preservada
 
-Nesta atualização, `site/pages/mapa.html` recebe apenas a troca do azul para `#0000ff` (mapa e legenda). O mapa simulado usa o mesmo azul.
+Nesta atualização, `site/pages/mapa.html` recebe apenas a troca do azul para `#00008b` (mapa e legenda). O mapa simulado usa o mesmo azul.
 
 A única adição em `site/app.js` carrega `site/integracao-simulador.js` antes do 404. A única adição em `site/pages/usuario.html` é o novo cartão. `banco.js`, firmware, C#, mapa real, autenticação, ocorrências e rotas de medições reais permanecem sem alterações.
 
