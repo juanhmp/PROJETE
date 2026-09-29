@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
-const Percurso = require('../simulador/public/percurso');
+const Percurso = require('../../simulador/public/percurso');
 class Elemento {
   constructor(tag = 'div') {
     this.tag = tag;
@@ -97,7 +97,7 @@ test('planejar, reordenar, iniciar e percorrer várias paradas sem sair antes da
     },
   };
   vm.runInNewContext(
-    fs.readFileSync(path.join(__dirname, '../simulador/public/navegacao.js'), 'utf8'),
+    fs.readFileSync(path.join(__dirname, '../../simulador/public/navegacao.js'), 'utf8'),
     ambiente
   );
   const a = { lat: -22.252, lng: -45.703 },

@@ -6,7 +6,7 @@ const sqlite3 = require('sqlite3');
 const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
-const instalar = require('../simulador/integracao');
+const instalar = require('../integracao-simulador');
 
 test('lotes simulados: validação, repetição, concorrência, persistência e isolamento', async () => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'ls-simulador-'));

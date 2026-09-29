@@ -1,7 +1,7 @@
 'use strict';
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const agregar = require('../simulador/public/areas');
+const agregar = require('../../simulador/public/areas');
 test('calor usa coordenadas exatas da referência, mantendo GPS do caminhão', () => {
   const referencia = { lat: -22.252345678, lng: -45.704456789 };
   const leitura = { lat: -22.2524, lng: -45.7045, lux: 80, referencia };

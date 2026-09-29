@@ -309,54 +309,53 @@ Essa conta será obrigada a trocar a senha no primeiro acesso.
 
 # 📁 Organização do repositório
 
-O código está organizado por responsabilidade. Os comandos de execução partem da raiz do repositório.
+Cada parte do LightSentinel tem sua própria pasta. O README concentra toda a documentação.
 
-| Caminho                          | Responsabilidade                                            |
-| -------------------------------- | ----------------------------------------------------------- |
-| `app.js`                         | Servidor principal, autenticação e API do site (porta 3000) |
-| `banco.js`                       | Acesso ao SQLite e dados do hardware real                   |
-| `pages/`                         | Páginas do usuário, administrador e operador                |
-| `simulador/server.js`            | Aplicação independente da feira (porta 3001)                |
-| `simulador/integracao.js`        | Recebimento dos lotes simulados e integração com o banco    |
-| `simulador/rotas.js`             | Consulta de ruas e rotas ao OSRM                            |
-| `simulador/public/app.js`        | Interface, sensor e microSD virtual                         |
-| `simulador/public/iluminacao.js` | Configuração dos pontos e dos lux                           |
-| `simulador/public/navegacao.js`  | Planejamento de paradas, movimento e câmera                 |
-| `simulador/public/percurso.js`   | Cálculo da posição ao longo da rota                         |
-| `simulador/public/areas.js`      | Agregação das leituras nas coordenadas exatas               |
-| `simulador/public/style.css`     | Aparência do simulador                                      |
-| `simulador/public/vendor/`       | Bibliotecas do mapa e respectivas licenças                  |
-| `C#/Program.cs`                  | Aplicação da base que recebe o Bluetooth e envia ao site    |
-| `stm/teste_projete/`             | Projeto STM32CubeIDE, fontes, bibliotecas e configuração    |
-| `tests/`                         | Testes de armazenamento, mapa e navegação                   |
-| `README.md`                      | Documentação completa do projeto e da demonstração          |
+| Pasta        | O que você encontra                                                                                              |
+| ------------ | ---------------------------------------------------------------------------------------------------------------- |
+| `STM/`       | Firmware do hardware. Abra esta pasta diretamente no STM32CubeIDE; o código principal fica em `Core/Src/main.c`. |
+| `Bluetooth/` | Programa C# do computador que recebe as leituras por Bluetooth e envia ao site.                                  |
+| `site/`      | Servidor da porta 3000, banco de dados, páginas e dependências do site.                                          |
+| `simulador/` | Aplicação independente da porta 3001, caminhão, rotas e iluminação simulada.                                     |
+
+**Dentro de `site`:** `app.js` inicia o servidor; `banco.js` acessa o banco; `pages/` contém as telas; `integracao-simulador.js` recebe as leituras da feira. A pasta `testes/` contém verificações automáticas para detectar problemas no armazenamento, mapa e rotas — não é necessário abrir esses arquivos para usar o sistema.
+
+**Por que existem dois JSON em `site`?** `package.json` lista as bibliotecas necessárias e os comandos de execução. `package-lock.json` registra as versões exatas para que a instalação seja reproduzível em outros computadores. Ambos são usados pelo npm e devem permanecer no Git.
+
+**Dentro de `simulador`:** `server.js` inicia a aplicação e `rotas.js` consulta as ruas. A pasta `public/` reúne a interface (`index.html`, `style.css`, `app.js`), iluminação (`iluminacao.js`), navegação (`navegacao.js`, `percurso.js`) e mapa (`areas.js`). `vendor/` contém bibliotecas externas e suas licenças.
+
+**Projeto STM:** a pasta intermediária `teste_projete` foi removida. O nome interno do projeto e o arquivo `teste_projete.ioc` foram preservados para manter a configuração do STM32CubeIDE. Importe o projeto existente a partir de `STM/`; não use os caminhos antigos do workspace.
+
+O banco local continua em `dados.db`, na raiz, para preservar os dados de instalações anteriores. Ele não aparece no GitHub. Os arquivos de configuração com ponto no nome na raiz orientam o Git e a formatação do código.
 
 ### Padrão de formatação
 
 Os arquivos JavaScript, HTML, CSS e a documentação usam Prettier. O arquivo `.editorconfig` define o padrão básico para os editores.
 
 ```powershell
+cd site
 npm.cmd install
 npm.cmd run format
 npm.cmd run format:check
 ```
 
-Para iniciar o simulador e rodar os testes:
+Dentro de `site`, para iniciar o simulador e rodar os testes:
 
 ```powershell
 npm.cmd run simulador
 npm.cmd test
 ```
 
-`node_modules`, `C#/bin`, `C#/obj` e os diretórios `Debug`/`Release` do STM32 são gerados localmente e ficam fora do versionamento. Após atualizar uma instalação antiga, execute `npm.cmd install` para restaurar as dependências do site. No C#, restaure os pacotes e compile pelo Visual Studio; no STM32CubeIDE, use Build Project para recriar os arquivos de compilação.
+`node_modules`, `Bluetooth/bin`, `Bluetooth/obj` e os diretórios `Debug`/`Release` do STM32 são gerados localmente e ficam fora do versionamento. Após atualizar uma instalação antiga, execute `npm.cmd --prefix site install` na raiz para restaurar as dependências do site. No C#, restaure os pacotes e compile pelo Visual Studio; no STM32CubeIDE, use Build Project para recriar os arquivos de compilação.
 
 ---
 
 # 🚀 Executando o sistema web
 
-Na raiz do repositório, instale as dependências:
+Na raiz do repositório, entre na pasta do site e instale as dependências:
 
 ```powershell
+cd site
 npm.cmd install
 ```
 
@@ -382,12 +381,12 @@ Aplicação independente que representa GPS → sensor de lux → microSD → en
 
 Use Node.js 18 ou superior e as dependências já instaladas do projeto.
 
-Na pasta principal do PROJETE, mantenha dois terminais abertos:
+Na pasta principal do PROJETE, execute `npm.cmd --prefix site install` uma vez e mantenha dois terminais abertos:
 
 **Terminal 1 — site e banco existentes**
 
 ```powershell
-node app.js
+node site/app.js
 ```
 
 **Terminal 2 — aplicação do simulador**
@@ -433,9 +432,9 @@ Se o envio falhar, as leituras permanecem guardadas. Use **Descarregar novamente
 
 ## Integração preservada
 
-Nesta atualização, `pages/mapa.html` recebe apenas a troca do azul para `#0000ff` (mapa e legenda). O mapa simulado usa o mesmo azul.
+Nesta atualização, `site/pages/mapa.html` recebe apenas a troca do azul para `#0000ff` (mapa e legenda). O mapa simulado usa o mesmo azul.
 
-A única adição em `app.js` carrega `simulador/integracao.js` antes do 404. A única adição em `pages/usuario.html` é o novo cartão. `banco.js`, firmware, C#, mapa real, autenticação, ocorrências e rotas de medições reais permanecem sem alterações.
+A única adição em `site/app.js` carrega `site/integracao-simulador.js` antes do 404. A única adição em `site/pages/usuario.html` é o novo cartão. `banco.js`, firmware, C#, mapa real, autenticação, ocorrências e rotas de medições reais permanecem sem alterações.
 
 Rotas novas:
 
@@ -459,7 +458,7 @@ Para servidor principal em outra máquina, use seu IP em `LIGHTSENTINEL_URL`. O 
 ## Testes
 
 ```powershell
-node --test tests/*.test.js
+npm.cmd --prefix site test
 ```
 
 Os testes usam um banco temporário e verificam validação, recebimento integral, idempotência, concorrência, persistência e isolamento das medições reais.

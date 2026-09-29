@@ -4,7 +4,7 @@ const path = require('path');
 const crypto = require('crypto');
 const sqlite3 = require('sqlite3').verbose();
 const express = require('express');
-const agregarAreas = require('./public/areas');
+const agregarAreas = require('../simulador/public/areas');
 const LIMITES = { sul: -22.285, norte: -22.22, oeste: -45.74, leste: -45.675 };
 
 function validarLote(body) {
@@ -110,7 +110,7 @@ function criarBanco(arquivo) {
 
 function instalar(app, opcoes = {}) {
   const banco = criarBanco(opcoes.arquivo || path.join(__dirname, '..', 'dados.db'));
-  const pasta = path.join(__dirname, 'public');
+  const pasta = path.join(__dirname, '..', 'simulador', 'public');
   app.use('/simulacao-assets', express.static(pasta));
   app.get('/mapa-simulado', (req, res) => res.sendFile(path.join(pasta, 'index.html')));
   app.get('/api/simulacao/mapa', async (req, res) => {

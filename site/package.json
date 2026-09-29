@@ -6,10 +6,10 @@
   "scripts": {
     "start": "node app.js",
     "dev": "node app.js",
-    "simulador": "node simulador/server.js",
-    "test": "node --test tests/*.test.js",
-    "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "simulador": "node ../simulador/server.js",
+    "test": "node --test testes/*.test.js",
+    "format": "prettier --ignore-path ../.prettierignore --write ..",
+    "format:check": "prettier --ignore-path ../.prettierignore --check .."
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",

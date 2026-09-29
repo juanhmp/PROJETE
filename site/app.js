@@ -623,7 +623,7 @@ app.get('/api/dashboard', exigirAdmin, async (req, res) => {
   }
 });
 // Funcionalidade da feira: rotas e tabelas independentes das medições reais.
-require('./simulador/integracao')(app);
+require('./integracao-simulador')(app);
 app.use((req, res) => res.status(404).json({ mensagem: 'Rota não encontrada.' }));
 iniciarBanco()
   .then(() => app.listen(PORT, () => console.log(`Servidor rodando em http://localhost:${PORT}`)))

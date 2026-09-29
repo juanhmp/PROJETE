@@ -1,7 +1,7 @@
 const path = require('path');
 const sqlite3 = require('sqlite3').verbose();
 const bcrypt = require('bcryptjs');
-const db = new sqlite3.Database(path.join(__dirname, 'dados.db'));
+const db = new sqlite3.Database(path.join(__dirname, '..', 'dados.db'));
 // Consultas básicas ao SQLite
 function run(sql, params = []) {
   return new Promise((resolve, reject) => {

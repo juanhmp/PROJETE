@@ -1,8 +1,8 @@
 'use strict';
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { consultar } = require('../simulador/rotas');
-const P = require('../simulador/public/percurso');
+const { consultar } = require('../../simulador/rotas');
+const P = require('../../simulador/public/percurso');
 const origem = [-45.704, -22.252],
   esquina = [-45.703, -22.252],
   destino = [-45.703, -22.251];

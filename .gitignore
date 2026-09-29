@@ -1,5 +1,5 @@
 # Dependências JavaScript (restauradas com npm.cmd install)
-/node_modules/
+node_modules/
 
 # Banco local e arquivos auxiliares do SQLite
 *.db
@@ -13,13 +13,13 @@
 !.env.example
 
 # Compilação da aplicação C#
-/C#/bin/
-/C#/obj/
-/C#/.vs/
+/Bluetooth/bin/
+/Bluetooth/obj/
+/Bluetooth/.vs/
 
 # Compilação do STM32CubeIDE (fontes e configuração do projeto permanecem no Git)
-/stm/**/Debug/
-/stm/**/Release/
+/STM/Debug/
+/STM/Release/
 /stm/.metadata/
 
 # Logs e arquivos temporários
