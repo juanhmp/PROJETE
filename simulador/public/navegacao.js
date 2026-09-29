@@ -164,7 +164,7 @@ window.criarNavegacao = function ({
           className: 'route-stop',
           html: `<span>${i + 1}</span>`,
           iconSize: [28, 28],
-          iconAnchor: [-8, 32],
+          iconAnchor: [14, 14],
         }),
       }).addTo(mapa);
       marcadoresParadas.push(m);
@@ -313,7 +313,7 @@ window.criarNavegacao = function ({
         fillOpacity: 1,
         interactive: false,
       }).addTo(mapa);
-      paradas = d.paradas;
+      // Preserve os pontos escolhidos; apenas o trajeto é ajustado às ruas.
       desenharParadas();
       $('instrucaoRota').textContent = `Rota com ${paradas.length} parada(s)`;
       $('distanciaRota').textContent = `${Math.round(rota.total)} m pelas ruas`;

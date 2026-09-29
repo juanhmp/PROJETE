@@ -49,7 +49,9 @@ test('planejar, reordenar, iniciar e percorrer várias paradas sem sair antes da
     panTo() {},
     removeLayer: (m) => camadas.delete(m),
   };
-  const layer = () => ({
+  const layer = (posicao, opcoes) => ({
+    posicao,
+    opcoes,
     addTo() {
       camadas.add(this);
       return this;
@@ -91,7 +93,7 @@ test('planejar, reordenar, iniciar e percorrer várias paradas sem sair antes da
       const pontos = ultimoPedido.split(';').map((p) => p.split(',').map(Number));
       const dados = {
         coordenadas: [[pos.lng, pos.lat], ...pontos],
-        paradas: pontos.map(([lng, lat], i) => ({ lng, lat, nome: 'Rua ' + i })),
+        paradas: pontos.map(([lng, lat], i) => ({ lng: lng + 0.0001, lat, nome: 'Rua ' + i })),
       };
       return { ok: true, json: async () => dados };
     },
@@ -123,6 +125,9 @@ test('planejar, reordenar, iniciar e percorrer várias paradas sem sair antes da
   await nav.inicializar();
   nav.destino(a);
   nav.destino(b);
+  const marcadores = () => [...camadas].filter((m) => m.opcoes?.icon?.className === 'route-stop');
+  assert.deepEqual(Array.from(marcadores()[0].posicao), [a.lat, a.lng]);
+  assert.deepEqual(Array.from(marcadores()[0].opcoes.icon.iconAnchor), [14, 14]);
   assert.equal(rotas, 0);
   assert.equal(frames.size, 0);
   assert.equal($('listaParadas').children.length, 2);
@@ -130,6 +135,13 @@ test('planejar, reordenar, iniciar e percorrer várias paradas sem sair antes da
   await $('iniciarRota').onclick();
   assert.equal(ultimoPedido, `${b.lng},${b.lat};${a.lng},${a.lat}`);
   assert.equal(rotas, 1);
+  assert.deepEqual(
+    marcadores().map((m) => Array.from(m.posicao)),
+    [
+      [b.lat, b.lng],
+      [a.lat, a.lng],
+    ]
+  );
   for (let t = 1; t < 30001 && frames.size; t += 100) {
     for (const [id, f] of [...frames]) {
       frames.delete(id);
