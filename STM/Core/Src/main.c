@@ -1,24 +1,27 @@
-/* USER CODE BEGIN Header */
 /**
   ******************************************************************************
   * @file           : main.c
-  * @brief          : Main program body
+  * @brief          : LightSentinel
   ******************************************************************************
   */
-/* USER CODE END Header */
 
-/* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "i2c.h"
 #include "spi.h"
 #include "usart.h"
 #include "gpio.h"
+#include "fatfs.h"
+#include "ff.h"
+#include "diskio.h"
 
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 
-/* Private defines -----------------------------------------------------------*/
+
+/* ==========================================================================
+   DEFINES
+   ========================================================================== */
 
 #define TSL2591_ADDR                   (0x29 << 1)
 #define TSL2591_COMMAND                0xA0
@@ -27,24 +30,44 @@
 #define TSL2591_ENABLE_AEN             0x02
 #define TSL2591_CONTROL                0x01
 #define TSL2591_C0DATAL                0x14
-
 #define TSL2591_INTEGRATIONTIME_100MS  0x00
 #define TSL2591_GAIN_LOW               0x00
 
 #define GPS_BUFFER_SIZE                128
 
-/* Private variables ---------------------------------------------------------*/
+#define SD_ARQUIVO                     "dados.txt"
 
-char mensagem[180];
+#define BT_HEADER_1                    0xAA
+#define BT_HEADER_2                    0x55
+#define BT_COMMAND                     0x01
+#define BT_END                         0xFF
 
-/* Variáveis do TSL2591 */
+#define BT_STATE_GPIO_PORT             GPIOB
+#define BT_STATE_PIN                   GPIO_PIN_1
+
+#define BT_COMANDO_BUFFER_SIZE         64
+
+
+/* ==========================================================================
+   VARIAVEIS
+   ========================================================================== */
+
+char mensagem[220];
+
+
+/* Sensor de luminosidade */
+
 uint16_t canal0 = 0;
 uint16_t canal1 = 0;
+
 float lux = 0.0f;
 
-/* Variáveis do GPS */
+
+/* GPS */
+
 char gpsBuffer[GPS_BUFFER_SIZE];
-uint8_t gpsByte;
+
+uint8_t gpsByte = 0;
 uint16_t gpsIndex = 0;
 
 float latitude = 0.0f;
@@ -57,991 +80,2255 @@ int gpsSatellites = 0;
 char gpsUTC[15] = "";
 char gpsDate[15] = "";
 
-/* Variáveis do Bluetooth */
-uint8_t bluetoothByte;
+
+/* Bluetooth */
+
+uint8_t bluetoothByte = 0;
+
+uint8_t bluetoothConectado = 0;
+
+/*
+ * Estado do protocolo:
+ *
+ * 0 = esperando AA
+ * 1 = esperando 55
+ * 2 = esperando 01
+ * 3 = esperando FF
+ * 4 = assinatura confirmada,
+ *     esperando CMD_DESCARREGAR
+ * 5 = transferencia concluida
+ */
 uint8_t bluetoothEstado = 0;
 
-/* Private function prototypes -----------------------------------------------*/
+char btComando[BT_COMANDO_BUFFER_SIZE];
+
+uint16_t btComandoIndex = 0;
+
+
+/* SD */
+
+FATFS SDFatFs;
+
+FIL arquivoSD;
+
+uint8_t sdMontado = 0;
+
+uint8_t sdArquivoAberto = 0;
+
+
+/* Controle de tempo */
+
+uint32_t ultimoTempoLux = 0;
+
+
+/* ==========================================================================
+   PROTOTIPOS
+   ========================================================================== */
 
 void SystemClock_Config(void);
 
-HAL_StatusTypeDef TSL2591_WriteRegister(uint8_t reg, uint8_t value);
-HAL_StatusTypeDef TSL2591_Init(void);
-HAL_StatusTypeDef TSL2591_ReadChannels(uint16_t *ch0, uint16_t *ch1);
-float TSL2591_CalculateLux(uint16_t ch0, uint16_t ch1);
 
-float GPS_ToDecimal(float coordinate);
-void GPS_Process(char *sentence);
+/* TSL2591 */
+
+void TSL2591_Init(void);
+
+float TSL2591_ReadLux(void);
+
+
+/* GPS */
+
+float GPS_ConverterCoordenada(
+    char *valor
+);
+
+void GPS_ProcessarLinha(
+    char *linha
+);
+
+void GPS_Processar(void);
+
+
+/* Bluetooth */
+
+uint8_t Bluetooth_EstaConectado(void);
+
+void Bluetooth_ResetarProtocolo(void);
+
+void Bluetooth_ProcessarByte(
+    uint8_t byte
+);
 
 void Bluetooth_Process(void);
 
-/* Private user code ---------------------------------------------------------*/
+void Bluetooth_EnviarFimDados(void);
 
-/**
-  * @brief  Write data to TSL2591 register
-  */
-HAL_StatusTypeDef TSL2591_WriteRegister(uint8_t reg, uint8_t value)
+
+/* SD */
+
+void SD_Iniciar(void);
+
+uint8_t SD_TentarMontarNovamente(void);
+
+void SD_GravarLinha(
+    char *linha
+);
+
+void SD_FecharArquivo(void);
+
+void SD_ReabrirArquivoParaGravar(void);
+
+uint8_t SD_EnviarArquivoBluetooth(void);
+
+uint8_t SD_LimparArquivo(void);
+
+
+/* Driver SD */
+
+DSTATUS USER_initialize(
+    BYTE lun
+);
+
+DSTATUS USER_status(
+    BYTE lun
+);
+
+
+/* ==========================================================================
+   TSL2591 - INICIALIZACAO
+   ========================================================================== */
+
+void TSL2591_Init(void)
 {
-    uint8_t buffer[2];
+    uint8_t data;
 
-    buffer[0] = TSL2591_COMMAND | reg;
-    buffer[1] = value;
 
-    return HAL_I2C_Master_Transmit(
+    data =
+        TSL2591_POWERON |
+        TSL2591_ENABLE_AEN;
+
+
+    HAL_I2C_Mem_Write(
         &hi2c1,
         TSL2591_ADDR,
-        buffer,
-        2,
-        1000
-    );
-}
-
-/**
-  * @brief  Initialize TSL2591
-  */
-HAL_StatusTypeDef TSL2591_Init(void)
-{
-    HAL_StatusTypeDef status;
-
-    /* Liga o sensor */
-    status = TSL2591_WriteRegister(
+        TSL2591_COMMAND |
         TSL2591_ENABLE,
-        TSL2591_POWERON | TSL2591_ENABLE_AEN
+        I2C_MEMADD_SIZE_8BIT,
+        &data,
+        1,
+        100
     );
 
-    if (status != HAL_OK)
-        return status;
 
-    /*
-     * Configura:
-     *
-     * Tempo de integração = 100 ms
-     * Ganho = baixo (1x)
-     */
-    status = TSL2591_WriteRegister(
-        TSL2591_CONTROL,
+    data =
         TSL2591_INTEGRATIONTIME_100MS |
-        TSL2591_GAIN_LOW
-    );
+        TSL2591_GAIN_LOW;
 
-    return status;
-}
 
-/**
-  * @brief  Read TSL2591 channels
-  */
-HAL_StatusTypeDef TSL2591_ReadChannels(
-    uint16_t *ch0,
-    uint16_t *ch1
-)
-{
-    uint8_t dados[4];
-
-    HAL_StatusTypeDef status;
-
-    status = HAL_I2C_Mem_Read(
+    HAL_I2C_Mem_Write(
         &hi2c1,
         TSL2591_ADDR,
-        TSL2591_COMMAND | TSL2591_C0DATAL,
+        TSL2591_COMMAND |
+        TSL2591_CONTROL,
         I2C_MEMADD_SIZE_8BIT,
-        dados,
-        4,
-        1000
+        &data,
+        1,
+        100
     );
-
-    if (status != HAL_OK)
-        return status;
-
-    /*
-     * Canal 0:
-     * dados[0] = byte baixo
-     * dados[1] = byte alto
-     */
-    *ch0 = ((uint16_t)dados[1] << 8) | dados[0];
-
-    /*
-     * Canal 1:
-     * dados[2] = byte baixo
-     * dados[3] = byte alto
-     */
-    *ch1 = ((uint16_t)dados[3] << 8) | dados[2];
-
-    return HAL_OK;
 }
 
-/**
-  * @brief  Calculate lux using TSL2591 characteristics
-  */
-float TSL2591_CalculateLux(
-    uint16_t ch0,
-    uint16_t ch1
-)
-{
-    /*
-     * TSL2591:
-     *
-     * Tempo de integração = 100 ms
-     * Ganho = 1x
-     *
-     * DF = 408
-     *
-     * CPL = (ATIME x AGAIN) / DF
-     *
-     * ATIME = 100 ms
-     * AGAIN = 1
-     */
-    const float integrationTime = 100.0f;
-    const float gain = 1.0f;
-    const float deviceFactor = 408.0f;
 
-    float cpl;
+/* ==========================================================================
+   TSL2591 - LEITURA
+   ========================================================================== */
+
+float TSL2591_ReadLux(void)
+{
+    uint8_t data[4];
+
+    uint16_t ch0;
+    uint16_t ch1;
+
     float ratio;
+    float cpl;
     float luxValue;
 
-    /*
-     * Evita divisão por zero
-     */
-    if (ch0 == 0)
+    const float integrationTime =
+        100.0f;
+
+    const float gain =
+        1.0f;
+
+    const float deviceFactor =
+        408.0f;
+
+
+    if (
+        HAL_I2C_Mem_Read(
+            &hi2c1,
+            TSL2591_ADDR,
+            TSL2591_COMMAND |
+            TSL2591_C0DATAL,
+            I2C_MEMADD_SIZE_8BIT,
+            data,
+            4,
+            100
+        )
+        !=
+        HAL_OK
+    )
+    {
         return 0.0f;
+    }
 
-    /*
-     * Se o infravermelho for maior que o canal 0,
-     * o resultado não é confiável.
-     */
-    if (ch1 >= ch0)
+
+    ch0 =
+        ((uint16_t)data[1] << 8)
+        |
+        data[0];
+
+
+    ch1 =
+        ((uint16_t)data[3] << 8)
+        |
+        data[2];
+
+
+    canal0 =
+        ch0;
+
+    canal1 =
+        ch1;
+
+
+    if (
+        ch0 == 0
+    )
+    {
         return 0.0f;
+    }
 
-    /*
-     * Counts Per Lux
-     */
-    cpl = (integrationTime * gain) / deviceFactor;
 
-    /*
-     * Relação entre infravermelho e luz total
-     */
-    ratio = (float)ch1 / (float)ch0;
+    if (
+        ch1 >= ch0
+    )
+    {
+        return 0.0f;
+    }
 
-    /*
-     * Cálculo compensado de Lux
-     *
-     * A diferença CH0 - CH1 remove
-     * grande parte da componente infravermelha.
-     *
-     * O termo (1 - ratio) melhora a
-     * compensação em diferentes condições
-     * de iluminação.
-     */
+
+    cpl =
+        (integrationTime * gain)
+        /
+        deviceFactor;
+
+
+    ratio =
+        (float)ch1
+        /
+        (float)ch0;
+
+
     luxValue =
-        ((float)ch0 - (float)ch1) *
-        (1.0f - ratio) /
+        ((float)ch0 - (float)ch1)
+        *
+        (1.0f - ratio)
+        /
         cpl;
 
-    /*
-     * Evita resultado negativo
-     */
-    if (luxValue < 0.0f)
-        luxValue = 0.0f;
+
+    if (
+        luxValue < 0.0f
+    )
+    {
+        luxValue =
+            0.0f;
+    }
+
 
     return luxValue;
 }
 
-/**
-  * @brief  Convert NMEA coordinate to decimal degrees
-  *
-  * Example:
-  * 2215.1234 -> 22.252056
-  */
-float GPS_ToDecimal(float coordinate)
+
+/* ==========================================================================
+   GPS - CONVERTER COORDENADA
+   ========================================================================== */
+
+float GPS_ConverterCoordenada(
+    char *valor
+)
 {
-    int degrees;
-    float minutes;
-    float decimal;
+    float coordenada;
 
-    degrees = (int)(coordinate / 100.0f);
+    int graus;
 
-    minutes =
-        coordinate -
-        ((float)degrees * 100.0f);
 
-    decimal =
-        degrees +
-        (minutes / 60.0f);
+    coordenada =
+        atof(
+            valor
+        );
 
-    return decimal;
+
+    graus =
+        (int)(
+            coordenada
+            /
+            100.0f
+        );
+
+
+    coordenada =
+        graus
+        +
+        (
+            (
+                coordenada
+                -
+                (graus * 100)
+            )
+            /
+            60.0f
+        );
+
+
+    return coordenada;
 }
 
-/**
-  * @brief  Process GPS NMEA sentence
-  */
-void GPS_Process(char *sentence)
+
+/* ==========================================================================
+   GPS - PROCESSAR LINHA NMEA
+   ========================================================================== */
+
+void GPS_ProcessarLinha(
+    char *linha
+)
 {
-    char copy[GPS_BUFFER_SIZE];
+    char copia[
+        GPS_BUFFER_SIZE
+    ];
 
     char *token;
-    char *fields[20];
 
-    int fieldCount = 0;
 
-    float nmeaLatitude;
-    float nmeaLongitude;
-
-    /*
-     * ============================================================
-     * GGA
-     * ============================================================
-     *
-     * Obtém:
-     * - Horário UTC
-     * - Latitude
-     * - Longitude
-     * - Qualidade do GPS
-     * - Número de satélites
-     */
-
-    if (strncmp(sentence, "$GPGGA", 6) == 0 ||
-        strncmp(sentence, "$GNGGA", 6) == 0)
+    if (
+        linha == NULL
+        ||
+        strlen(linha) == 0
+    )
     {
+        return;
+    }
+
+
+    /* ======================================================================
+       GGA
+       ====================================================================== */
+
+    if (
+        strncmp(
+            linha,
+            "$GPGGA",
+            6
+        ) == 0
+        ||
+        strncmp(
+            linha,
+            "$GNGGA",
+            6
+        ) == 0
+    )
+    {
+        int campo =
+            0;
+
+        char hora[15] =
+            "";
+
+        char lat[20] =
+            "";
+
+        char lon[20] =
+            "";
+
+        char latDir =
+            'N';
+
+        char lonDir =
+            'E';
+
+        int fix =
+            0;
+
+        int sats =
+            0;
+
+
         strncpy(
-            copy,
-            sentence,
+            copia,
+            linha,
             GPS_BUFFER_SIZE - 1
         );
 
-        copy[GPS_BUFFER_SIZE - 1] = '\0';
 
-        token = strtok(copy, ",");
+        copia[
+            GPS_BUFFER_SIZE - 1
+        ] = '\0';
 
-        while (
-            token != NULL &&
-            fieldCount < 20
-        )
-        {
-            fields[fieldCount] = token;
 
-            fieldCount++;
-
-            token = strtok(NULL, ",");
-        }
-
-        if (fieldCount < 8)
-            return;
-
-        /*
-         * Campo 1 = UTC
-         */
-        if (strlen(fields[1]) > 0)
-        {
-            strncpy(
-                gpsUTC,
-                fields[1],
-                sizeof(gpsUTC) - 1
+        token =
+            strtok(
+                copia,
+                ","
             );
 
-            gpsUTC[sizeof(gpsUTC) - 1] = '\0';
-        }
 
-        /*
-         * Verifica latitude e longitude
-         */
-        if (strlen(fields[2]) == 0 ||
-            strlen(fields[4]) == 0)
+        while (
+            token != NULL
+        )
         {
-            gpsFix = 0;
+            switch (
+                campo
+            )
+            {
+                case 1:
 
-            return;
+                    strcpy(
+                        hora,
+                        token
+                    );
+
+                    break;
+
+
+                case 2:
+
+                    strcpy(
+                        lat,
+                        token
+                    );
+
+                    break;
+
+
+                case 3:
+
+                    latDir =
+                        token[0];
+
+                    break;
+
+
+                case 4:
+
+                    strcpy(
+                        lon,
+                        token
+                    );
+
+                    break;
+
+
+                case 5:
+
+                    lonDir =
+                        token[0];
+
+                    break;
+
+
+                case 6:
+
+                    fix =
+                        atoi(
+                            token
+                        );
+
+                    break;
+
+
+                case 7:
+
+                    sats =
+                        atoi(
+                            token
+                        );
+
+                    break;
+
+
+                default:
+
+                    break;
+            }
+
+
+            token =
+                strtok(
+                    NULL,
+                    ","
+                );
+
+
+            campo++;
         }
 
-        /*
-         * Campo 6 = qualidade do GPS
-         */
-        gpsFix = atoi(fields[6]);
 
-        /*
-         * Campo 7 = satélites
-         */
-        gpsSatellites = atoi(fields[7]);
+        if (
+            fix > 0
+        )
+        {
+            latitude =
+                GPS_ConverterCoordenada(
+                    lat
+                );
 
-        /*
-         * Sem posição válida
-         */
-        if (gpsFix == 0)
-            return;
 
-        /*
-         * Latitude
-         */
-        nmeaLatitude = atof(fields[2]);
+            longitude =
+                GPS_ConverterCoordenada(
+                    lon
+                );
 
-        latitude = GPS_ToDecimal(
-            nmeaLatitude
-        );
 
-        /*
-         * Sul = negativo
-         */
-        if (fields[3][0] == 'S')
-            latitude = -latitude;
+            if (
+                latDir == 'S'
+            )
+            {
+                latitude =
+                    -latitude;
+            }
 
-        /*
-         * Longitude
-         */
-        nmeaLongitude = atof(fields[4]);
 
-        longitude = GPS_ToDecimal(
-            nmeaLongitude
-        );
+            if (
+                lonDir == 'W'
+            )
+            {
+                longitude =
+                    -longitude;
+            }
 
-        /*
-         * Oeste = negativo
-         */
-        if (fields[5][0] == 'W')
-            longitude = -longitude;
+
+            gpsSatellites =
+                sats;
+
+
+            if (
+                strlen(hora) >= 6
+            )
+            {
+                sprintf(
+                    gpsUTC,
+                    "%c%c:%c%c:%c%c",
+                    hora[0],
+                    hora[1],
+                    hora[2],
+                    hora[3],
+                    hora[4],
+                    hora[5]
+                );
+            }
+
+
+            gpsFix =
+                1;
+        }
+
+
+        return;
     }
 
-    /*
-     * ============================================================
-     * RMC
-     * ============================================================
-     *
-     * Obtém:
-     * - Horário UTC
-     * - Velocidade
-     * - Data
-     */
 
-    if (strncmp(sentence, "$GPRMC", 6) == 0 ||
-        strncmp(sentence, "$GNRMC", 6) == 0)
+    /* ======================================================================
+       RMC
+       ====================================================================== */
+
+    if (
+        strncmp(
+            linha,
+            "$GPRMC",
+            6
+        ) == 0
+        ||
+        strncmp(
+            linha,
+            "$GNRMC",
+            6
+        ) == 0
+    )
     {
-        fieldCount = 0;
+        int campo =
+            0;
 
-        token = strtok(sentence, ",");
+        char hora[15] =
+            "";
+
+        char data[15] =
+            "";
+
+        char status =
+            'V';
+
+        char lat[20] =
+            "";
+
+        char lon[20] =
+            "";
+
+        char latDir =
+            'N';
+
+        char lonDir =
+            'E';
+
+        float velocidadeKnots =
+            0.0f;
+
+
+        strncpy(
+            copia,
+            linha,
+            GPS_BUFFER_SIZE - 1
+        );
+
+
+        copia[
+            GPS_BUFFER_SIZE - 1
+        ] = '\0';
+
+
+        token =
+            strtok(
+                copia,
+                ","
+            );
+
 
         while (
-            token != NULL &&
-            fieldCount < 20
+            token != NULL
         )
         {
-            fields[fieldCount] = token;
+            switch (
+                campo
+            )
+            {
+                case 1:
 
-            fieldCount++;
+                    strcpy(
+                        hora,
+                        token
+                    );
 
-            token = strtok(NULL, ",");
+                    break;
+
+
+                case 2:
+
+                    status =
+                        token[0];
+
+                    break;
+
+
+                case 3:
+
+                    strcpy(
+                        lat,
+                        token
+                    );
+
+                    break;
+
+
+                case 4:
+
+                    latDir =
+                        token[0];
+
+                    break;
+
+
+                case 5:
+
+                    strcpy(
+                        lon,
+                        token
+                    );
+
+                    break;
+
+
+                case 6:
+
+                    lonDir =
+                        token[0];
+
+                    break;
+
+
+                case 7:
+
+                    velocidadeKnots =
+                        atof(
+                            token
+                        );
+
+                    break;
+
+
+                case 9:
+
+                    strcpy(
+                        data,
+                        token
+                    );
+
+                    break;
+
+
+                default:
+
+                    break;
+            }
+
+
+            token =
+                strtok(
+                    NULL,
+                    ","
+                );
+
+
+            campo++;
         }
 
-        if (fieldCount < 10)
-            return;
 
-        /*
-         * Campo 1 = UTC
-         */
-        if (strlen(fields[1]) > 0)
+        if (
+            status == 'A'
+        )
         {
-            strncpy(
-                gpsUTC,
-                fields[1],
-                sizeof(gpsUTC) - 1
-            );
+            latitude =
+                GPS_ConverterCoordenada(
+                    lat
+                );
 
-            gpsUTC[sizeof(gpsUTC) - 1] = '\0';
-        }
 
-        /*
-         * Campo 2 = status
-         *
-         * A = válido
-         * V = inválido
-         */
-        if (fields[2][0] != 'A')
-            return;
+            longitude =
+                GPS_ConverterCoordenada(
+                    lon
+                );
 
-        /*
-         * Campo 7 = velocidade em nós
-         *
-         * Conversão:
-         *
-         * 1 nó = 1,852 km/h
-         */
-        if (strlen(fields[7]) > 0)
-        {
+
+            if (
+                latDir == 'S'
+            )
+            {
+                latitude =
+                    -latitude;
+            }
+
+
+            if (
+                lonDir == 'W'
+            )
+            {
+                longitude =
+                    -longitude;
+            }
+
+
             velocidade =
-                atof(fields[7]) * 1.852f;
+                velocidadeKnots
+                *
+                1.852f;
+
+
+            if (
+                strlen(hora) >= 6
+            )
+            {
+                sprintf(
+                    gpsUTC,
+                    "%c%c:%c%c:%c%c",
+                    hora[0],
+                    hora[1],
+                    hora[2],
+                    hora[3],
+                    hora[4],
+                    hora[5]
+                );
+            }
+
+
+            if (
+                strlen(data) >= 6
+            )
+            {
+                sprintf(
+                    gpsDate,
+                    "%c%c/%c%c/20%c%c",
+                    data[0],
+                    data[1],
+                    data[2],
+                    data[3],
+                    data[4],
+                    data[5]
+                );
+            }
+
+
+            gpsFix =
+                1;
         }
 
-        /*
-         * Campo 9 = data
-         *
-         * Formato:
-         * DDMMYY
-         */
-        if (strlen(fields[9]) >= 6)
+
+        return;
+    }
+}
+
+
+/* ==========================================================================
+   GPS - RECEPCAO
+   ========================================================================== */
+
+void GPS_Processar(void)
+{
+    /*
+     * Bluetooth conectado:
+     *
+     * NAO le mais nenhum byte do GPS.
+     */
+
+    if (
+        bluetoothConectado
+    )
+    {
+        return;
+    }
+
+
+    if (
+        HAL_UART_Receive(
+            &huart2,
+            &gpsByte,
+            1,
+            0
+        )
+        ==
+        HAL_OK
+    )
+    {
+        if (
+            gpsByte == '\n'
+        )
         {
-            int dia;
-            int mes;
-            int ano;
+            gpsBuffer[
+                gpsIndex
+            ] = '\0';
 
-            dia =
-                (fields[9][0] - '0') * 10 +
-                (fields[9][1] - '0');
 
-            mes =
-                (fields[9][2] - '0') * 10 +
-                (fields[9][3] - '0');
-
-            ano =
-                (fields[9][4] - '0') * 10 +
-                (fields[9][5] - '0');
-
-            ano = 2000 + ano;
-
-            sprintf(
-                gpsDate,
-                "%02d/%02d/%04d",
-                dia,
-                mes,
-                ano
+            GPS_ProcessarLinha(
+                gpsBuffer
             );
+
+
+            if (
+                gpsFix
+            )
+            {
+                sprintf(
+                    mensagem,
+                    "GPS | Data: %s | UTC: %s | Lat: %.6f | Lon: %.6f | Vel: %.2f km/h | Sat: %d\r\n",
+                    gpsDate,
+                    gpsUTC,
+                    latitude,
+                    longitude,
+                    velocidade,
+                    gpsSatellites
+                );
+
+
+                SD_GravarLinha(
+                    mensagem
+                );
+
+
+                gpsFix =
+                    0;
+            }
+
+
+            gpsIndex =
+                0;
+        }
+
+        else if (
+            gpsByte != '\r'
+        )
+        {
+            if (
+                gpsIndex
+                <
+                GPS_BUFFER_SIZE - 1
+            )
+            {
+                gpsBuffer[
+                    gpsIndex++
+                ] =
+                    gpsByte;
+            }
+            else
+            {
+                gpsIndex =
+                    0;
+            }
         }
     }
 }
 
 
-/* ============================================================
-   BLUETOOTH / HANDSHAKE DO COMPUTADOR
-   ============================================================
+/* ==========================================================================
+   BLUETOOTH - STATE
+   ========================================================================== */
 
-   O computador envia:
+uint8_t Bluetooth_EstaConectado(void)
+{
+    if (
+        HAL_GPIO_ReadPin(
+            BT_STATE_GPIO_PORT,
+            BT_STATE_PIN
+        )
+        ==
+        GPIO_PIN_SET
+    )
+    {
+        return 1;
+    }
 
-   AA 55 01 FF
 
-   O STM32 responde:
+    return 0;
+}
 
-   AA 55 01 FF
 
-   O celular não precisa enviar esse pacote.
-   Ele continua recebendo as mensagens normalmente.
-   ============================================================ */
+/* ==========================================================================
+   BLUETOOTH - RESETAR PROTOCOLO
+   ========================================================================== */
+
+void Bluetooth_ResetarProtocolo(void)
+{
+    bluetoothEstado =
+        0;
+
+
+    btComandoIndex =
+        0;
+
+
+    memset(
+        btComando,
+        0,
+        sizeof(btComando)
+    );
+}
+
+
+/* ==========================================================================
+   BLUETOOTH - MARCADOR DE FIM
+   ========================================================================== */
+
+void Bluetooth_EnviarFimDados(void)
+{
+    const char fim[] =
+        "END_OF_DATA\r\n";
+
+
+    HAL_UART_Transmit(
+        &huart1,
+        (uint8_t *)fim,
+        strlen(fim),
+        2000
+    );
+}
+
+
+/* ==========================================================================
+   BLUETOOTH - PROCESSAR BYTE RECEBIDO
+   ========================================================================== */
+
+void Bluetooth_ProcessarByte(
+    uint8_t byte
+)
+{
+    /* ======================================================================
+       ESTADOS 0..3:
+       ESPERANDO AA 55 01 FF
+       ====================================================================== */
+
+    if (
+        bluetoothEstado <= 3
+    )
+    {
+        switch (
+            bluetoothEstado
+        )
+        {
+            /* AA */
+
+            case 0:
+
+                if (
+                    byte ==
+                    BT_HEADER_1
+                )
+                {
+                    bluetoothEstado =
+                        1;
+                }
+
+                break;
+
+
+            /* 55 */
+
+            case 1:
+
+                if (
+                    byte ==
+                    BT_HEADER_2
+                )
+                {
+                    bluetoothEstado =
+                        2;
+                }
+                else if (
+                    byte ==
+                    BT_HEADER_1
+                )
+                {
+                    bluetoothEstado =
+                        1;
+                }
+                else
+                {
+                    bluetoothEstado =
+                        0;
+                }
+
+                break;
+
+
+            /* 01 */
+
+            case 2:
+
+                if (
+                    byte ==
+                    BT_COMMAND
+                )
+                {
+                    bluetoothEstado =
+                        3;
+                }
+                else
+                {
+                    bluetoothEstado =
+                        0;
+                }
+
+                break;
+
+
+            /* FF */
+
+            case 3:
+
+                if (
+                    byte ==
+                    BT_END
+                )
+                {
+                    uint8_t resposta[4] =
+                    {
+                        BT_HEADER_1,
+                        BT_HEADER_2,
+                        BT_COMMAND,
+                        BT_END
+                    };
+
+
+                    /*
+                     * Responde EXATAMENTE:
+                     *
+                     * AA 55 01 FF
+                     *
+                     * Isso e o que o C#
+                     * esta esperando.
+                     */
+
+                    HAL_UART_Transmit(
+                        &huart1,
+                        resposta,
+                        sizeof(resposta),
+                        1000
+                    );
+
+
+                    /*
+                     * Agora espera:
+                     *
+                     * CMD_DESCARREGAR\n
+                     */
+
+                    bluetoothEstado =
+                        4;
+
+
+                    btComandoIndex =
+                        0;
+
+
+                    memset(
+                        btComando,
+                        0,
+                        sizeof(btComando)
+                    );
+                }
+                else
+                {
+                    bluetoothEstado =
+                        0;
+                }
+
+                break;
+
+
+            default:
+
+                bluetoothEstado =
+                    0;
+
+                break;
+        }
+
+
+        return;
+    }
+
+
+    /* ======================================================================
+       ESTADO 4:
+       ESPERANDO CMD_DESCARREGAR
+       ====================================================================== */
+
+    if (
+        bluetoothEstado == 4
+    )
+    {
+        /*
+         * Ignora CR.
+         */
+
+        if (
+            byte == '\r'
+        )
+        {
+            return;
+        }
+
+
+        /*
+         * Terminou comando.
+         */
+
+        if (
+            byte == '\n'
+        )
+        {
+            btComando[
+                btComandoIndex
+            ] = '\0';
+
+
+            /*
+             * O C# enviou:
+             *
+             * CMD_DESCARREGAR
+             */
+
+            if (
+                strcmp(
+                    btComando,
+                    "CMD_DESCARREGAR"
+                )
+                ==
+                0
+            )
+            {
+                uint8_t envioOK;
+
+
+                /*
+                 * O arquivo ja esta fechado
+                 * desde que o Bluetooth
+                 * conectou.
+                 *
+                 * Portanto ele contem SOMENTE
+                 * informacoes coletadas antes
+                 * da conexao.
+                 */
+
+                if (
+                    !sdMontado
+                )
+                {
+                    SD_TentarMontarNovamente();
+                }
+
+
+                envioOK =
+                    0;
+
+
+                if (
+                    sdMontado
+                )
+                {
+                    envioOK =
+                        SD_EnviarArquivoBluetooth();
+                }
+
+
+                if (
+                    envioOK
+                )
+                {
+                    /*
+                     * PRIMEIRO:
+                     *
+                     * envia END_OF_DATA para
+                     * informar ao C# que o
+                     * arquivo terminou.
+                     */
+
+                    Bluetooth_EnviarFimDados();
+
+
+                    /*
+                     * DEPOIS:
+                     *
+                     * apaga todo o conteudo
+                     * do dados.txt.
+                     *
+                     * Nao espera ACK_SUCCESS,
+                     * conforme solicitado.
+                     */
+
+                    SD_LimparArquivo();
+
+
+                    /*
+                     * Transferencia concluida.
+                     *
+                     * Continua conectado e
+                     * continua SEM coletar.
+                     */
+
+                    bluetoothEstado =
+                        5;
+                }
+            }
+
+
+            btComandoIndex =
+                0;
+
+
+            memset(
+                btComando,
+                0,
+                sizeof(btComando)
+            );
+
+
+            return;
+        }
+
+
+        /*
+         * Guarda caractere do comando.
+         */
+
+        if (
+            btComandoIndex
+            <
+            BT_COMANDO_BUFFER_SIZE - 1
+        )
+        {
+            btComando[
+                btComandoIndex++
+            ] =
+                (char)byte;
+        }
+        else
+        {
+            /*
+             * Comando grande demais:
+             * descarta e espera novamente.
+             */
+
+            btComandoIndex =
+                0;
+
+
+            memset(
+                btComando,
+                0,
+                sizeof(btComando)
+            );
+        }
+
+
+        return;
+    }
+
+
+    /* ======================================================================
+       ESTADO 5:
+       TRANSFERENCIA JA CONCLUIDA
+       ====================================================================== */
+
+    if (
+        bluetoothEstado == 5
+    )
+    {
+        /*
+         * Nao faz nova transferencia.
+         *
+         * Pode chegar ACK_SUCCESS do C#,
+         * mas nao precisamos dele para
+         * apagar porque o arquivo ja foi
+         * limpo conforme solicitado.
+         *
+         * O STM32 continua parado ate
+         * o Bluetooth desconectar.
+         */
+
+        return;
+    }
+}
+
+
+/* ==========================================================================
+   BLUETOOTH - PROCESSAMENTO
+   ========================================================================== */
 
 void Bluetooth_Process(void)
 {
+    uint8_t estadoAtual;
+
+
+    estadoAtual =
+        Bluetooth_EstaConectado();
+
+
+    /* ======================================================================
+       ACABOU DE CONECTAR
+       ====================================================================== */
+
+    if (
+        estadoAtual == 1
+        &&
+        bluetoothConectado == 0
+    )
+    {
+        /*
+         * PRIMEIRA ACAO:
+         *
+         * bloqueia GPS, Lux e gravacao.
+         */
+
+        bluetoothConectado =
+            1;
+
+
+        Bluetooth_ResetarProtocolo();
+
+
+        /*
+         * Congela o lote atual.
+         */
+
+        SD_FecharArquivo();
+
+
+        /*
+         * NAO envia o arquivo aqui.
+         *
+         * Primeiro espera o C# mandar
+         * AA 55 01 FF.
+         */
+
+        return;
+    }
+
+
+    /* ======================================================================
+       DESCONECTOU
+       ====================================================================== */
+
+    if (
+        estadoAtual == 0
+        &&
+        bluetoothConectado == 1
+    )
+    {
+        bluetoothConectado =
+            0;
+
+
+        Bluetooth_ResetarProtocolo();
+
+
+        if (
+            !sdMontado
+        )
+        {
+            SD_TentarMontarNovamente();
+        }
+
+
+        /*
+         * Depois de uma transferencia
+         * completa, dados.txt esta vazio.
+         *
+         * Abre para iniciar o proximo lote.
+         */
+
+        if (
+            sdMontado
+        )
+        {
+            SD_ReabrirArquivoParaGravar();
+        }
+
+
+        /*
+         * Comeca a contar o proximo
+         * intervalo de Lux daqui.
+         */
+
+        ultimoTempoLux =
+            HAL_GetTick();
+
+
+        return;
+    }
+
+
     /*
-     * Tenta receber apenas 1 byte.
-     *
-     * Timeout = 0:
-     * se não houver byte, continua imediatamente.
-     *
-     * Isso evita que o Bluetooth atrapalhe
-     * o GPS e o TSL2591.
+     * Se nao estiver conectado,
+     * nao processa USART1.
      */
-    if (HAL_UART_Receive(
+
+    if (
+        !bluetoothConectado
+    )
+    {
+        return;
+    }
+
+
+    /*
+     * Enquanto houver bytes recebidos
+     * do computador, processa todos.
+     */
+
+    while (
+        HAL_UART_Receive(
             &huart1,
             &bluetoothByte,
             1,
             0
-        ) != HAL_OK)
+        )
+        ==
+        HAL_OK
+    )
     {
-        return;
+        Bluetooth_ProcessarByte(
+            bluetoothByte
+        );
     }
-
-    /*
-     * ============================================================
-     * Estado 0
-     * ============================================================
-     *
-     * Esperando o primeiro byte:
-     *
-     * AA
-     */
-    if (bluetoothEstado == 0)
-    {
-        if (bluetoothByte == 0xAA)
-        {
-            bluetoothEstado = 1;
-        }
-
-        return;
-    }
-
-    /*
-     * ============================================================
-     * Estado 1
-     * ============================================================
-     *
-     * Já recebeu:
-     *
-     * AA
-     *
-     * Agora espera:
-     *
-     * 55
-     */
-    if (bluetoothEstado == 1)
-    {
-        if (bluetoothByte == 0x55)
-        {
-            bluetoothEstado = 2;
-        }
-        else if (bluetoothByte == 0xAA)
-        {
-            bluetoothEstado = 1;
-        }
-        else
-        {
-            bluetoothEstado = 0;
-        }
-
-        return;
-    }
-
-    /*
-     * ============================================================
-     * Estado 2
-     * ============================================================
-     *
-     * Já recebeu:
-     *
-     * AA 55
-     *
-     * Agora espera:
-     *
-     * 01
-     */
-    if (bluetoothEstado == 2)
-    {
-        if (bluetoothByte == 0x01)
-        {
-            bluetoothEstado = 3;
-        }
-        else if (bluetoothByte == 0xAA)
-        {
-            bluetoothEstado = 1;
-        }
-        else
-        {
-            bluetoothEstado = 0;
-        }
-
-        return;
-    }
-
-    /*
-     * ============================================================
-     * Estado 3
-     * ============================================================
-     *
-     * Já recebeu:
-     *
-     * AA 55 01
-     *
-     * Agora espera:
-     *
-     * FF
-     */
-    if (bluetoothEstado == 3)
-    {
-        if (bluetoothByte == 0xFF)
-        {
-            /*
-             * Handshake completo!
-             *
-             * Responde exatamente:
-             *
-             * AA 55 01 FF
-             */
-
-            uint8_t resposta[4] =
-            {
-                0xAA,
-                0x55,
-                0x01,
-                0xFF
-            };
-
-            HAL_UART_Transmit(
-                &huart1,
-                resposta,
-                4,
-                1000
-            );
-        }
-
-        /*
-         * Volta a procurar um novo pacote.
-         */
-        bluetoothEstado = 0;
-
-        return;
-    }
-
-    /*
-     * Segurança:
-     * se alguma coisa inesperada acontecer,
-     * reinicia o estado.
-     */
-    bluetoothEstado = 0;
 }
 
 
-/* Main ----------------------------------------------------------------------*/
+/* ==========================================================================
+   SD - INICIAR
+   ========================================================================== */
 
-int main(void)
+void SD_Iniciar(void)
 {
-    /* USER CODE BEGIN 1 */
+    FRESULT resultado;
 
-    uint32_t ultimoSensor = 0;
 
-    /* USER CODE END 1 */
+    sdMontado =
+        0;
 
-    /* MCU Configuration--------------------------------------------------------*/
 
-    HAL_Init();
+    sdArquivoAberto =
+        0;
 
-    SystemClock_Config();
 
-    /* Initialize all configured peripherals */
+    resultado =
+        f_mount(
+            &SDFatFs,
+            USERPath,
+            1
+        );
 
-    MX_GPIO_Init();
-    MX_I2C1_Init();
-    MX_SPI1_Init();
-    MX_USART1_UART_Init();
-    MX_USART2_UART_Init();
 
-    /* USER CODE BEGIN 2 */
-
-    /*
-     * Inicializa o TSL2591
-     */
-    if (TSL2591_Init() == HAL_OK)
+    if (
+        resultado != FR_OK
+    )
     {
-        sprintf(
-            mensagem,
-            "TSL2591 OK\r\n"
-        );
-
-        HAL_UART_Transmit(
-            &huart1,
-            (uint8_t *)mensagem,
-            strlen(mensagem),
-            1000
-        );
-    }
-    else
-    {
-        sprintf(
-            mensagem,
-            "ERRO: TSL2591!\r\n"
-        );
-
-        HAL_UART_Transmit(
-            &huart1,
-            (uint8_t *)mensagem,
-            strlen(mensagem),
-            1000
-        );
+        return;
     }
 
+
+    sdMontado =
+        1;
+
+
     /*
-     * Mensagem inicial
+     * Mantendo o comportamento atual:
+     *
+     * ao iniciar o STM32, cria/zera
+     * dados.txt.
      */
-    sprintf(
-        mensagem,
-        "Sistema iniciado!\r\n"
+
+    resultado =
+        f_open(
+            &arquivoSD,
+            SD_ARQUIVO,
+            FA_CREATE_ALWAYS |
+            FA_WRITE
+        );
+
+
+    if (
+        resultado != FR_OK
+    )
+    {
+        sdArquivoAberto =
+            0;
+
+        return;
+    }
+
+
+    sdArquivoAberto =
+        1;
+}
+
+
+/* ==========================================================================
+   SD - TENTAR MONTAR NOVAMENTE
+   ========================================================================== */
+
+uint8_t SD_TentarMontarNovamente(void)
+{
+    FRESULT resultado;
+
+    DSTATUS estadoFisico;
+
+
+    estadoFisico =
+        USER_initialize(
+            0
+        );
+
+
+    if (
+        estadoFisico
+        &
+        STA_NOINIT
+    )
+    {
+        sdMontado =
+            0;
+
+        return 0;
+    }
+
+
+    resultado =
+        f_mount(
+            &SDFatFs,
+            USERPath,
+            1
+        );
+
+
+    if (
+        resultado != FR_OK
+    )
+    {
+        sdMontado =
+            0;
+
+        return 0;
+    }
+
+
+    sdMontado =
+        1;
+
+
+    return 1;
+}
+
+
+/* ==========================================================================
+   SD - GRAVAR
+   ========================================================================== */
+
+void SD_GravarLinha(
+    char *linha
+)
+{
+    FRESULT resultado;
+
+    UINT bytesEscritos;
+
+    UINT tamanho;
+
+
+    /*
+     * Bluetooth conectado:
+     *
+     * PROIBIDO gravar.
+     */
+
+    if (
+        bluetoothConectado
+    )
+    {
+        return;
+    }
+
+
+    if (
+        !sdMontado
+    )
+    {
+        return;
+    }
+
+
+    if (
+        !sdArquivoAberto
+    )
+    {
+        return;
+    }
+
+
+    tamanho =
+        strlen(
+            linha
+        );
+
+
+    resultado =
+        f_write(
+            &arquivoSD,
+            linha,
+            tamanho,
+            &bytesEscritos
+        );
+
+
+    if (
+        resultado != FR_OK
+    )
+    {
+        return;
+    }
+
+
+    if (
+        bytesEscritos
+        !=
+        tamanho
+    )
+    {
+        return;
+    }
+
+
+    /*
+     * Garante que a leitura ficou
+     * fisicamente salva.
+     */
+
+    f_sync(
+        &arquivoSD
+    );
+}
+
+
+/* ==========================================================================
+   SD - FECHAR
+   ========================================================================== */
+
+void SD_FecharArquivo(void)
+{
+    if (
+        !sdArquivoAberto
+    )
+    {
+        return;
+    }
+
+
+    /*
+     * Grava tudo que ainda estiver
+     * pendente.
+     */
+
+    f_sync(
+        &arquivoSD
     );
 
-    HAL_UART_Transmit(
-        &huart1,
-        (uint8_t *)mensagem,
-        strlen(mensagem),
-        1000
+
+    f_close(
+        &arquivoSD
     );
 
-    sprintf(
-        mensagem,
-        "NEO-M8N aguardando sinal...\r\n"
-    );
 
-    HAL_UART_Transmit(
-        &huart1,
-        (uint8_t *)mensagem,
-        strlen(mensagem),
-        1000
-    );
+    sdArquivoAberto =
+        0;
+}
 
-    /* USER CODE END 2 */
 
-    /* Infinite loop */
+/* ==========================================================================
+   SD - REABRIR PARA GRAVAR
+   ========================================================================== */
+
+void SD_ReabrirArquivoParaGravar(void)
+{
+    FRESULT resultado;
+
+
+    if (
+        !sdMontado
+    )
+    {
+        return;
+    }
+
+
+    /*
+     * FA_OPEN_ALWAYS:
+     *
+     * abre se existir;
+     * cria se nao existir.
+     */
+
+    resultado =
+        f_open(
+            &arquivoSD,
+            SD_ARQUIVO,
+            FA_OPEN_ALWAYS |
+            FA_WRITE
+        );
+
+
+    if (
+        resultado != FR_OK
+    )
+    {
+        sdArquivoAberto =
+            0;
+
+        return;
+    }
+
+
+    /*
+     * Vai para o final.
+     *
+     * Depois de uma descarga completa
+     * o tamanho sera 0.
+     */
+
+    resultado =
+        f_lseek(
+            &arquivoSD,
+            f_size(
+                &arquivoSD
+            )
+        );
+
+
+    if (
+        resultado != FR_OK
+    )
+    {
+        f_close(
+            &arquivoSD
+        );
+
+
+        sdArquivoAberto =
+            0;
+
+        return;
+    }
+
+
+    sdArquivoAberto =
+        1;
+}
+
+
+/* ==========================================================================
+   SD - ENVIAR ARQUIVO
+   ========================================================================== */
+
+uint8_t SD_EnviarArquivoBluetooth(void)
+{
+    FIL arquivoLeitura;
+
+    FRESULT resultado;
+
+    UINT bytesLidos;
+
+    uint8_t buffer[128];
+
+
+    if (
+        !sdMontado
+    )
+    {
+        return 0;
+    }
+
+
+    /*
+     * Abre somente para leitura.
+     */
+
+    resultado =
+        f_open(
+            &arquivoLeitura,
+            SD_ARQUIVO,
+            FA_READ
+        );
+
+
+    if (
+        resultado != FR_OK
+    )
+    {
+        return 0;
+    }
+
 
     while (1)
     {
-        /* USER CODE BEGIN WHILE */
+        bytesLidos =
+            0;
+
+
+        resultado =
+            f_read(
+                &arquivoLeitura,
+                buffer,
+                sizeof(buffer),
+                &bytesLidos
+            );
+
 
         /*
-         * ============================================================
-         * BLUETOOTH
-         * ============================================================
-         *
-         * USART1 = Bluetooth
-         *
-         * Verifica se o computador enviou:
-         *
-         * AA 55 01 FF
-         *
-         * Se enviou, responde:
-         *
-         * AA 55 01 FF
+         * Erro no SD:
+         * nao considera transferencia
+         * concluida.
          */
+
+        if (
+            resultado != FR_OK
+        )
+        {
+            f_close(
+                &arquivoLeitura
+            );
+
+
+            return 0;
+        }
+
+
+        /*
+         * EOF:
+         *
+         * todo o arquivo foi percorrido.
+         */
+
+        if (
+            bytesLidos == 0
+        )
+        {
+            break;
+        }
+
+
+        /*
+         * Envia exatamente os bytes
+         * que estavam no dados.txt.
+         */
+
+        if (
+            HAL_UART_Transmit(
+                &huart1,
+                buffer,
+                bytesLidos,
+                5000
+            )
+            !=
+            HAL_OK
+        )
+        {
+            f_close(
+                &arquivoLeitura
+            );
+
+
+            return 0;
+        }
+    }
+
+
+    f_close(
+        &arquivoLeitura
+    );
+
+
+    /*
+     * Chegou ao final sem erro.
+     */
+
+    return 1;
+}
+
+
+/* ==========================================================================
+   SD - LIMPAR ARQUIVO
+   ========================================================================== */
+
+uint8_t SD_LimparArquivo(void)
+{
+    FIL arquivoLimpeza;
+
+    FRESULT resultado;
+
+
+    if (
+        !sdMontado
+    )
+    {
+        return 0;
+    }
+
+
+    /*
+     * FA_CREATE_ALWAYS:
+     *
+     * dados.txt continua existindo,
+     * mas todo o conteudo e apagado.
+     */
+
+    resultado =
+        f_open(
+            &arquivoLimpeza,
+            SD_ARQUIVO,
+            FA_CREATE_ALWAYS |
+            FA_WRITE
+        );
+
+
+    if (
+        resultado != FR_OK
+    )
+    {
+        return 0;
+    }
+
+
+    resultado =
+        f_sync(
+            &arquivoLimpeza
+        );
+
+
+    if (
+        resultado != FR_OK
+    )
+    {
+        f_close(
+            &arquivoLimpeza
+        );
+
+
+        return 0;
+    }
+
+
+    resultado =
+        f_close(
+            &arquivoLimpeza
+        );
+
+
+    if (
+        resultado != FR_OK
+    )
+    {
+        return 0;
+    }
+
+
+    return 1;
+}
+
+
+/* ==========================================================================
+   MAIN
+   ========================================================================== */
+
+int main(void)
+{
+    uint8_t estadoBluetoothInicial;
+
+
+    /* HAL */
+
+    HAL_Init();
+
+
+    /* Clock */
+
+    SystemClock_Config();
+
+
+    /* Perifericos */
+
+    MX_GPIO_Init();
+
+    MX_I2C1_Init();
+
+    MX_SPI1_Init();
+
+    MX_USART1_UART_Init();
+
+    MX_USART2_UART_Init();
+
+    MX_FATFS_Init();
+
+
+    /* ======================================================================
+       SENSOR
+       ====================================================================== */
+
+    TSL2591_Init();
+
+
+    HAL_Delay(
+        100
+    );
+
+
+    /* ======================================================================
+       SD
+       ====================================================================== */
+
+    SD_Iniciar();
+
+
+    /* ======================================================================
+       ESTADO INICIAL DO BLUETOOTH
+       ====================================================================== */
+
+    estadoBluetoothInicial =
+        Bluetooth_EstaConectado();
+
+
+    if (
+        estadoBluetoothInicial
+    )
+    {
+        /*
+         * Se ja estiver conectado
+         * quando ligar:
+         *
+         * para coleta imediatamente.
+         */
+
+        bluetoothConectado =
+            1;
+
+
+        Bluetooth_ResetarProtocolo();
+
+
+        /*
+         * Congela o arquivo.
+         */
+
+        SD_FecharArquivo();
+
+
+        /*
+         * NAO envia nada ainda.
+         *
+         * Espera AA 55 01 FF do C#.
+         */
+    }
+    else
+    {
+        bluetoothConectado =
+            0;
+
+
+        Bluetooth_ResetarProtocolo();
+    }
+
+
+    /* ======================================================================
+       LOOP PRINCIPAL
+       ====================================================================== */
+
+    while (1)
+    {
+        /*
+         * PRIMEIRO:
+         *
+         * verifica Bluetooth.
+         */
+
         Bluetooth_Process();
 
 
         /*
-         * ============================================================
-         * GPS
-         * ============================================================
-         *
-         * USART2 = GPS
-         * USART1 = Bluetooth
+         * ================================================================
+         * SO COLETA COM BLUETOOTH DESCONECTADO
+         * ================================================================
          */
 
-        if (HAL_UART_Receive(
-                &huart2,
-                &gpsByte,
-                1,
-                10
-            ) == HAL_OK)
+        if (
+            !bluetoothConectado
+        )
         {
             /*
-             * Começo de uma mensagem NMEA
+             * GPS.
              */
-            if (gpsByte == '$')
-            {
-                gpsIndex = 0;
 
-                gpsBuffer[gpsIndex] =
-                    gpsByte;
+            GPS_Processar();
 
-                gpsIndex++;
-            }
-
-            else if (gpsIndex > 0)
-            {
-                /*
-                 * Continua armazenando
-                 */
-                if (gpsIndex <
-                    GPS_BUFFER_SIZE - 1)
-                {
-                    gpsBuffer[gpsIndex] =
-                        gpsByte;
-
-                    gpsIndex++;
-                }
-                else
-                {
-                    /*
-                     * Buffer cheio
-                     */
-                    gpsIndex = 0;
-                }
-
-                /*
-                 * Fim da mensagem
-                 */
-                if (gpsByte == '\n')
-                {
-                    gpsBuffer[gpsIndex] =
-                        '\0';
-
-                    /*
-                     * Processa GPS
-                     */
-                    GPS_Process(
-                        gpsBuffer
-                    );
-
-                    /*
-                     * Se existe posição válida
-                     */
-                    if (gpsFix > 0)
-                    {
-                        if (strlen(gpsUTC) >= 6)
-                        {
-                            sprintf(
-                                mensagem,
-
-                                "GPS | Data: %s | UTC: %c%c:%c%c:%c%c | Lat: %.6f | Lon: %.6f | Vel: %.2f km/h | Sat: %d\r\n",
-
-                                gpsDate,
-
-                                gpsUTC[0],
-                                gpsUTC[1],
-                                gpsUTC[2],
-                                gpsUTC[3],
-                                gpsUTC[4],
-                                gpsUTC[5],
-
-                                latitude,
-                                longitude,
-
-                                velocidade,
-
-                                gpsSatellites
-                            );
-                        }
-                        else
-                        {
-                            sprintf(
-                                mensagem,
-
-                                "GPS | Data: %s | UTC: --:--:-- | Lat: %.6f | Lon: %.6f | Vel: %.2f km/h | Sat: %d\r\n",
-
-                                gpsDate,
-
-                                latitude,
-                                longitude,
-
-                                velocidade,
-
-                                gpsSatellites
-                            );
-                        }
-
-                        /*
-                         * Envia para Bluetooth
-                         */
-                        HAL_UART_Transmit(
-                            &huart1,
-                            (uint8_t *)mensagem,
-                            strlen(mensagem),
-                            1000
-                        );
-
-                        gpsFix = 0;
-                    }
-
-                    /*
-                     * Próxima mensagem
-                     */
-                    gpsIndex = 0;
-                }
-            }
-        }
-
-
-        /*
-         * ============================================================
-         * TSL2591
-         * ============================================================
-         *
-         * Leitura aproximadamente a cada 1 segundo.
-         */
-
-        if ((HAL_GetTick() -
-             ultimoSensor) >= 1000)
-        {
-            ultimoSensor =
-                HAL_GetTick();
 
             /*
-             * Lê os canais
+             * Lux a cada segundo.
              */
-            if (TSL2591_ReadChannels(
-                    &canal0,
-                    &canal1
-                ) == HAL_OK)
+
+            if (
+                HAL_GetTick()
+                -
+                ultimoTempoLux
+                >=
+                1000
+            )
             {
-                /*
-                 * Calcula Lux
-                 */
+                ultimoTempoLux =
+                    HAL_GetTick();
+
+
                 lux =
-                    TSL2591_CalculateLux(
-                        canal0,
-                        canal1
-                    );
+                    TSL2591_ReadLux();
 
-                /*
-                 * Envia Lux
-                 */
+
                 sprintf(
                     mensagem,
                     "Lux: %.2f\r\n",
                     lux
                 );
 
-                HAL_UART_Transmit(
-                    &huart1,
-                    (uint8_t *)mensagem,
-                    strlen(mensagem),
-                    1000
-                );
-            }
-            else
-            {
-                sprintf(
-                    mensagem,
-                    "ERRO: TSL2591 leitura!\r\n"
-                );
 
-                HAL_UART_Transmit(
-                    &huart1,
-                    (uint8_t *)mensagem,
-                    strlen(mensagem),
-                    1000
+                SD_GravarLinha(
+                    mensagem
                 );
             }
         }
 
-        /* USER CODE END WHILE */
 
-        /* USER CODE BEGIN 3 */
-
+        /*
+         * NAO colocar HAL_Delay(1).
+         *
+         * Isso anteriormente fazia o
+         * polling do GPS perder bytes.
+         */
     }
-
-    /* USER CODE END 3 */
 }
 
 
-/**
-  * @brief System Clock Configuration
-  * @retval None
-  */
+/* ==========================================================================
+   SYSTEM CLOCK
+   ========================================================================== */
+
 void SystemClock_Config(void)
 {
-    RCC_OscInitTypeDef RCC_OscInitStruct = {0};
-    RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+    RCC_OscInitTypeDef RCC_OscInitStruct =
+        {0};
 
-    /** Initializes the RCC Oscillators according to the specified parameters
-    * in the RCC_OscInitTypeDef structure.
-    */
+
+    RCC_ClkInitTypeDef RCC_ClkInitStruct =
+        {0};
+
 
     RCC_OscInitStruct.OscillatorType =
         RCC_OSCILLATORTYPE_HSE;
 
+
     RCC_OscInitStruct.HSEState =
         RCC_HSE_ON;
+
 
     RCC_OscInitStruct.HSEPredivValue =
         RCC_HSE_PREDIV_DIV1;
 
+
     RCC_OscInitStruct.HSIState =
         RCC_HSI_ON;
+
 
     RCC_OscInitStruct.PLL.PLLState =
         RCC_PLL_ON;
 
+
     RCC_OscInitStruct.PLL.PLLSource =
         RCC_PLLSOURCE_HSE;
+
 
     RCC_OscInitStruct.PLL.PLLMUL =
         RCC_PLL_MUL9;
 
-    if (HAL_RCC_OscConfig(
+
+    if (
+        HAL_RCC_OscConfig(
             &RCC_OscInitStruct
-        ) != HAL_OK)
+        )
+        !=
+        HAL_OK
+    )
     {
         Error_Handler();
     }
 
-    /** Initializes the CPU, AHB and APB buses clocks
-    */
 
     RCC_ClkInitStruct.ClockType =
         RCC_CLOCKTYPE_HCLK |
@@ -1049,57 +2336,62 @@ void SystemClock_Config(void)
         RCC_CLOCKTYPE_PCLK1 |
         RCC_CLOCKTYPE_PCLK2;
 
+
     RCC_ClkInitStruct.SYSCLKSource =
         RCC_SYSCLKSOURCE_PLLCLK;
+
 
     RCC_ClkInitStruct.AHBCLKDivider =
         RCC_SYSCLK_DIV1;
 
+
     RCC_ClkInitStruct.APB1CLKDivider =
         RCC_HCLK_DIV2;
+
 
     RCC_ClkInitStruct.APB2CLKDivider =
         RCC_HCLK_DIV1;
 
-    if (HAL_RCC_ClockConfig(
+
+    if (
+        HAL_RCC_ClockConfig(
             &RCC_ClkInitStruct,
             FLASH_LATENCY_2
-        ) != HAL_OK)
+        )
+        !=
+        HAL_OK
+    )
     {
         Error_Handler();
     }
 }
 
 
-/**
-  * @brief  This function is executed in case of error occurrence.
-  * @retval None
-  */
+/* ==========================================================================
+   ERROR HANDLER
+   ========================================================================== */
+
 void Error_Handler(void)
 {
     __disable_irq();
+
 
     while (1)
     {
     }
 }
 
+
 #ifdef USE_FULL_ASSERT
 
-/**
-  * @brief  Reports the name of the source file and the source line number
-  *         where the assert_param error has occurred.
-  */
 void assert_failed(
     uint8_t *file,
     uint32_t line
 )
 {
-    /* USER CODE BEGIN 6 */
+    (void)file;
 
-    /* User can add your own implementation */
-
-    /* USER CODE END 6 */
+    (void)line;
 }
 
-#endif /* USE_FULL_ASSERT */
+#endif
