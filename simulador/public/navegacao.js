@@ -249,7 +249,9 @@ window.criarNavegacao = function ({
     paradas.push({
       lat: latlng.lat,
       lng: latlng.lng,
-      nome: Number.isFinite(latlng.lux) ? `Ponto de iluminação (${latlng.lux} lux)` : '',
+      nome:
+        latlng.nome ||
+        (Number.isFinite(latlng.lux) ? `Ponto de iluminação (${latlng.lux} lux)` : ''),
     });
     desenharParadas();
     atualizar();

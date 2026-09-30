@@ -488,6 +488,14 @@
         gap: 12px;
         margin-top: 18px;
       }
+      .telemetria {
+        grid-template-columns: repeat(4, 1fr);
+      }
+      @media (max-width: 600px) {
+        .measure-list.telemetria {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
       .measure-card {
         border: 1px solid #e5e7eb;
         border-radius: 10px;
@@ -573,6 +581,16 @@
             <i class="dot" style="background: #ef4444"> </i>
             Menos iluminada
           </span>
+        </div>
+        <div class="measure-list telemetria" aria-label="Dados da última medição">
+          <div class="measure-card"><p>Data da última medição</p><b id="dataMedicao">—</b></div>
+          <div class="measure-card"
+            ><p>Horário de Brasília (UTC−3)</p><b id="horaMedicao">—</b></div
+          >
+          <div class="measure-card"
+            ><p>Velocidade na medição</p><b id="velocidadeMedicao">—</b></div
+          >
+          <div class="measure-card"><p>Satélites na medição</p><b id="satelitesMedicao">—</b></div>
         </div>
         <div class="info-box" id="resumoMapa" style="margin-bottom: 0">
           Aguardando dados do mapa de calor...
@@ -685,9 +703,33 @@
       }).addTo(mapa);
     }
 
+    function atualizarTelemetria(medicao) {
+      const data = medicao?.timestamp ? new Date(medicao.timestamp) : null;
+      const valida = data && Number.isFinite(data.getTime());
+      // O GPS permanece em UTC no banco. A apresentação usa UTC−3 fixo,
+      // inclusive quando a conversão muda o dia, mês ou ano.
+      const opcoes = { timeZone: 'Etc/GMT+3' };
+      document.getElementById('dataMedicao').textContent = valida
+        ? data.toLocaleDateString('pt-BR', opcoes)
+        : '—';
+      document.getElementById('horaMedicao').textContent = valida
+        ? data.toLocaleTimeString('pt-BR', { ...opcoes, hour12: false })
+        : '—';
+      document.getElementById('velocidadeMedicao').textContent = Number.isFinite(
+        medicao?.velocidade
+      )
+        ? `${Math.round(medicao.velocidade)} km/h`
+        : '—';
+      document.getElementById('satelitesMedicao').textContent = Number.isInteger(medicao?.satelites)
+        ? String(medicao.satelites)
+        : '—';
+    }
+
     async function carregar() {
       const r = await apiFetch('/api/mapa/calor');
+      if (!r.ok) throw new Error('Não foi possível atualizar o mapa.');
       const dados = await r.json();
+      atualizarTelemetria(dados.ultimaMedicao);
       areasMapa = Array.isArray(dados.areas) ? dados.areas : [];
 
       desenharHeatmap();

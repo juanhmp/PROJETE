@@ -591,3 +591,43 @@ footer {
   font-weight: 800;
   box-shadow: 0 2px 8px #22335544;
 }
+
+.central-marker span {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #253345;
+  color: white;
+  border: 3px solid white;
+  font-size: 25px;
+  box-shadow: 0 3px 12px #0003;
+}
+#confirmarCentral {
+  border: 0;
+  border-radius: 18px;
+  padding: 28px;
+  width: min(440px, calc(100% - 32px));
+  color: #253345;
+  box-shadow: 0 20px 60px #0003;
+}
+#confirmarCentral::backdrop {
+  background: #14233780;
+}
+#confirmarCentral h2 {
+  margin-top: 0;
+}
+#confirmarCentral p {
+  line-height: 1.5;
+}
+.central-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 24px;
+}
+.viewer #adicionarCentral {
+  display: none;
+}

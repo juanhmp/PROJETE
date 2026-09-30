@@ -84,6 +84,8 @@ async function iniciarBanco() {
   await garantirColuna('ocorrencias', 'status', "TEXT NOT NULL DEFAULT 'pendente'");
   await garantirColuna('ocorrencias', 'criado_por', 'INTEGER');
   await garantirColuna('medicoes', 'lote_id', 'TEXT');
+  await garantirColuna('medicoes', 'velocidade', 'REAL');
+  await garantirColuna('medicoes', 'satelites', 'INTEGER');
 
   // O modo de simulação não é mais usado.
   await run("DELETE FROM configuracoes WHERE chave = 'modo_teste'");
@@ -252,15 +254,31 @@ async function buscarAreasMapaCalor() {
     );
   }
 
-  return { loteId, dados };
+  const ultimaMedicao = await get(
+    `SELECT timestamp, velocidade, satelites FROM medicoes
+     ${loteId ? 'WHERE lote_id = ?' : ''}
+     ORDER BY julianday(timestamp) DESC, id DESC LIMIT 1`,
+    loteId ? [loteId] : []
+  );
+  return { loteId, dados, ultimaMedicao: ultimaMedicao || null };
 }
 
-function inserirMedicao({ luminosidade, lat, lng, local, origem, loteId, timestamp }) {
+function inserirMedicao({
+  luminosidade,
+  lat,
+  lng,
+  local,
+  origem,
+  loteId,
+  timestamp,
+  velocidade = null,
+  satelites = null,
+}) {
   return run(
     `INSERT INTO medicoes
-      (luminosidade, lat, lng, local, origem, lote_id, timestamp)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [luminosidade, lat, lng, local, origem, loteId, timestamp]
+      (luminosidade, lat, lng, local, origem, lote_id, timestamp, velocidade, satelites)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [luminosidade, lat, lng, local, origem, loteId, timestamp, velocidade, satelites]
   );
 }
 

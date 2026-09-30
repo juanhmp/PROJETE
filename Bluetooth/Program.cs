@@ -73,6 +73,10 @@ class Program
 
     static string? ultimoTimestamp = null;
 
+    static double? ultimaVelocidade = null;
+
+    static int? ultimosSatelites = null;
+
     static bool gpsValido = false;
 
     static int medicoesRecebidasNoLote = 0;
@@ -96,6 +100,10 @@ class Program
             get;
             set;
         }
+
+        public double? velocidade { get; set; }
+
+        public int? satelites { get; set; }
 
         public string? timestamp
         {
@@ -207,6 +215,8 @@ class Program
                 ultimaLatitude = 0;
                 ultimaLongitude = 0;
                 ultimoTimestamp = null;
+                ultimaVelocidade = null;
+                ultimosSatelites = null;
                 gpsValido = false;
                 medicoesRecebidasNoLote = 0;
 
@@ -950,6 +960,17 @@ class Program
                     );
             }
 
+            // Cada leitura conserva a telemetria da mesma mensagem GPS.
+            Match velocidadeMatch = Regex.Match(linha, @"Vel:\s*(\d+(?:[.,]\d+)?)\s*km/h");
+            Match satelitesMatch = Regex.Match(linha, @"Sat:\s*(\d+)");
+            ultimaVelocidade = velocidadeMatch.Success &&
+                double.TryParse(velocidadeMatch.Groups[1].Value.Replace(',', '.'),
+                    NumberStyles.Float, CultureInfo.InvariantCulture, out double velocidade)
+                && double.IsFinite(velocidade) && velocidade >= 0 ? velocidade : null;
+            ultimosSatelites = satelitesMatch.Success &&
+                int.TryParse(satelitesMatch.Groups[1].Value, out int satelites)
+                ? satelites : null;
+
             gpsValido =
                 true;
 
@@ -1049,6 +1070,8 @@ class Program
                     lng =
                         ultimaLongitude,
 
+                    velocidade = ultimaVelocidade,
+                    satelites = ultimosSatelites,
                     timestamp =
                         ultimoTimestamp
                 };

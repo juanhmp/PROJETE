@@ -11,6 +11,7 @@
     <script defer src="/simulacao-assets/navegacao.js"></script>
     <script defer src="/simulacao-assets/iluminacao.js"></script>
     <script defer src="/simulacao-assets/areas.js"></script>
+    <script defer src="/simulacao-assets/central.js"></script>
     <script defer src="/simulacao-assets/app.js"></script>
   </head>
   <body>
@@ -114,6 +115,8 @@
               seguirá a ordem da lista.</p
             ><ol id="listaParadas" class="stop-list"></ol
             ><p id="resumoParadas" class="helper">Nenhuma parada selecionada.</p
+            ><button id="adicionarCentral" class="subtle full" type="button"
+              >Adicionar central (ETE FMC) à rota</button
             ><button id="iniciarRota" class="primary full" type="button" disabled
               >Iniciar rota</button
             ><button id="limparRota" class="subtle full" type="button" disabled
@@ -145,5 +148,13 @@
         ></footer
       >
     </main>
+    <dialog id="confirmarCentral" aria-labelledby="tituloCentral">
+      <h2 id="tituloCentral">Chegada à central</h2>
+      <p id="resumoCentral"></p>
+      <div class="central-actions">
+        <button id="cancelarCentral" class="subtle" type="button" autofocus>Agora não</button>
+        <button id="descarregarCentral" class="primary" type="button">Descarregar dados</button>
+      </div>
+    </dialog>
   </body>
 </html>

@@ -15,6 +15,7 @@
     heat = null,
     areas = [],
     navegacao = null,
+    central = null,
     iluminacao = null,
     ultimoPontoColetado = null;
   function aviso(texto, erro = false) {
@@ -267,11 +268,9 @@
     cliqueMapa: (p) => iluminacao.clique(p),
     aoMover() {
       const ponto = atualizarSensor();
-      if (!ponto) {
-        ultimoPontoColetado = null;
-        return;
-      }
-      if (ponto.id !== ultimoPontoColetado && registrar()) ultimoPontoColetado = ponto.id;
+      if (!ponto) ultimoPontoColetado = null;
+      else if (ponto.id !== ultimoPontoColetado && registrar()) ultimoPontoColetado = ponto.id;
+      central?.verificar(state);
     },
   });
   function atualizarUI() {
@@ -307,6 +306,7 @@
         ? 'COLETANDO • MICROSD VIRTUAL'
         : 'SIMULADOR DE HARDWARE';
     navegacao?.controles();
+    central?.controles();
     truck.setLatLng([state.lat, state.lng]);
     $('leituras').replaceChildren(
       ...state.medicoes
@@ -396,7 +396,7 @@
       timer = setInterval(registrar, 1000);
     atualizarUI();
   };
-  $('descarregar').onclick = async () => {
+  async function descarregar() {
     if (ocupado || bloqueado || !state.medicoes.length) return;
     parar();
     navegacao.pausar();
@@ -438,7 +438,24 @@
       atualizarUI();
       navegacao.inicializar();
     }
-  };
+  }
+  $('descarregar').onclick = descarregar;
+  central = CentralSimulada.instalar({
+    mapa,
+    obterEstado: () => state,
+    travado: () =>
+      ocupado || bloqueado || !!state.loteId || iluminacao.invalido || !!navegacao?.carregando,
+    pausar: () => {
+      parar();
+      navegacao.pausar();
+    },
+    atualizar: atualizarUI,
+    descarregar,
+    adicionarParada(p) {
+      $('modoDirigir').click();
+      navegacao.destino(p);
+    },
+  });
   // Uma segunda aba não deve sobrescrever leituras que outra aba acabou de guardar.
   window.addEventListener('storage', (e) => {
     if (e.key === KEY || e.key === null) {

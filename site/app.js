@@ -485,10 +485,11 @@ app.get('/api/medicoes', exigirAdmin, async (req, res) => {
 });
 app.get('/api/mapa/calor', async (req, res) => {
   try {
-    const { loteId, dados } = await buscarAreasMapaCalor();
+    const { loteId, dados, ultimaMedicao } = await buscarAreasMapaCalor();
     res.json({
       loteId,
       totalAreas: dados.length,
+      ultimaMedicao,
       areas: dados.map((d) => ({
         lat: Number(d.lat_celula),
         lng: Number(d.lng_celula),
@@ -515,6 +516,21 @@ async function salvarMedicao(dado, origem = 'bluetooth', loteId = null) {
     longitude > 180
   )
     throw new Error('DADOS_INVALIDOS');
+  const velocidade = dado.velocidade ?? null;
+  const satelites = dado.satelites ?? null;
+  if (
+    velocidade !== null &&
+    (typeof velocidade !== 'number' || !Number.isFinite(velocidade) || velocidade < 0)
+  )
+    throw new Error('DADOS_INVALIDOS');
+  if (
+    satelites !== null &&
+    (typeof satelites !== 'number' ||
+      !Number.isInteger(satelites) ||
+      satelites < 0 ||
+      satelites > 255)
+  )
+    throw new Error('DADOS_INVALIDOS');
   const timestamp = dado.timestamp || new Date().toISOString();
   const resultado = await inserirMedicao({
     luminosidade: valor,
@@ -524,6 +540,8 @@ async function salvarMedicao(dado, origem = 'bluetooth', loteId = null) {
     origem,
     loteId,
     timestamp,
+    velocidade,
+    satelites,
   });
   return {
     id: resultado.id,
@@ -532,6 +550,8 @@ async function salvarMedicao(dado, origem = 'bluetooth', loteId = null) {
     lng: longitude,
     lote_id: loteId,
     timestamp,
+    velocidade,
+    satelites,
   };
 }
 
