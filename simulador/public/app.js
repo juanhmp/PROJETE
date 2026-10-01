@@ -139,6 +139,7 @@
   $('centralizar').onclick = () => mapa.setView(viewer ? CENTRO : [state.lat, state.lng], 14);
   if (viewer) {
     document.body.classList.add('viewer');
+    requestAnimationFrame(() => mapa.invalidateSize());
     $('titulo').textContent = 'Mapa de calor simulado';
     $('descricao').textContent =
       'Leituras da demonstração, publicadas após descarregar o microSD virtual.';
@@ -297,9 +298,7 @@
       : state.loteId
         ? 'Descarregar novamente'
         : 'Descarregar';
-    $('automatico').textContent = timer
-      ? 'Pausar coleta automática'
-      : 'Iniciar coleta a cada 1 segundo';
+    $('automatico').textContent = timer ? 'Pausar coleta' : 'Coleta automática';
     $('estado').textContent = ocupado
       ? 'ENVIANDO LOTE'
       : timer

@@ -1,7 +1,8 @@
 <!doctype html>
 <html lang="pt-BR">
   <head>
-    <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>LightSentinel • Simulação</title>
     <link rel="stylesheet" href="/simulacao-assets/vendor/leaflet.css" />
     <link rel="stylesheet" href="/simulacao-assets/style.css" />
@@ -15,43 +16,40 @@
     <script defer src="/simulacao-assets/app.js"></script>
   </head>
   <body>
-    <header
-      ><div class="brand"
+    <header>
+      <div class="brand"
         ><span class="logo">L<span>•</span></span
-        ><div
-          ><strong>LightSentinel</strong><small>ILUMINAÇÃO QUE CONECTA A CIDADE</small></div
-        ></div
-      ><a id="voltar" href="/usuario">Área do usuário ↗</a></header
-    >
+        ><div><strong>LightSentinel</strong><small>SIMULADOR • GRUPO 3403</small></div></div
+      >
+      <span class="badge" id="estado">SIMULADOR DE HARDWARE</span>
+      <a id="voltar" href="/usuario">Área do usuário ↗</a>
+    </header>
     <main>
       <div class="heading"
-        ><div
-          ><p class="eyebrow">DEMONSTRAÇÃO • PROJETE</p><h1 id="titulo">A cidade nas suas mãos.</h1
-          ><p id="descricao">Toque em uma rua e deixe o caminhão seguir o caminho até ela.</p></div
-        ><span class="badge" id="estado">SIMULADOR DE HARDWARE</span></div
+        ><h1 id="titulo">Explore. Meça. Ilumine.</h1
+        ><p id="descricao">Defina a luz, trace a rota e descarregue na central.</p></div
       >
       <div class="layout" id="layout">
-        <section class="map-card"
-          ><div class="map-top"
+        <section class="map-card">
+          <div class="map-top"
             ><div
               ><strong>Santa Rita do Sapucaí</strong
-              ><small id="mapHint"
-                >Toque uma vez na rua de destino. O caminhão segue as vias.</small
-              ></div
+              ><small id="mapHint">Toque na rua para definir a iluminação.</small></div
             ><button id="centralizar" class="subtle" type="button">Centralizar</button></div
-          ><div class="map-wrap"
-            ><div id="map" aria-label="Mapa interativo de Santa Rita do Sapucaí"></div>
+          >
+          <div class="map-wrap">
+            <div id="map" aria-label="Mapa interativo de Santa Rita do Sapucaí"></div>
             <div id="navegacao" class="navigation"
-              ><div class="nav-direction">➜</div
+              ><span class="nav-direction">➜</span
               ><div
                 ><strong id="instrucaoRota">Localizando a rua…</strong
-                ><small id="distanciaRota">Toque na rua para escolher um destino</small></div
+                ><small id="distanciaRota">Escolha as paradas no mapa</small></div
               ></div
             >
-            <div class="drive-controls" id="driveControls"
-              ><button id="pausarTrajeto" disabled>Pausar trajeto</button
-              ><button id="seguir" aria-pressed="true">Seguir caminhão ✓</button
-              ><label for="velocidade"
+            <div class="drive-controls" id="driveControls">
+              <button id="pausarTrajeto" disabled>Pausar trajeto</button>
+              <button id="seguir" aria-pressed="true">Seguir caminhão ✓</button>
+              <label for="velocidade"
                 >Ritmo
                 <input
                   id="velocidade"
@@ -62,105 +60,117 @@
                   value="3"
                   inputmode="numeric"
                   aria-label="Ritmo da simulação de 1 a 20 vezes"
-                />
-                <span>×</span></label
-              ></div
-            ></div
-          ><div class="legend"
+                /><span>×</span></label
+              >
+            </div>
+          </div>
+          <div class="legend"
             ><span><i style="background: #ef4444"></i>0 lux</span
             ><span><i style="background: #eab308"></i>30 lux</span
             ><span><i style="background: #22c55e"></i>60 lux</span
             ><span><i style="background: #00008b"></i>100+ lux</span
-            ><small>Escala ilustrativa da demonstração</small></div
-          ><p id="mapStatus" role="status"
-            >A prévia mostra somente as leituras guardadas neste dispositivo.</p
-          ></section
-        >
-        <aside id="controles">
-          <section class="card"
-            ><p class="eyebrow">01 / ILUMINAÇÃO DA CIDADE</p><h2>Prepare os pontos</h2
-            ><div class="point-modes"
-              ><button id="modoEditar" aria-pressed="true">Definir iluminação</button
-              ><button id="modoDirigir" aria-pressed="false">Dirigir caminhão</button></div
-            ><p class="coords" id="pontoSelecionado">Toque na rua para definir um ponto.</p
-            ><label for="lux">Lux do ponto selecionado <span>lux</span></label
-            ><input
-              id="lux"
-              type="number"
-              min="0"
-              max="88000"
-              step="0.1"
-              value="20"
-              inputmode="decimal"
-            /><label class="sr-only" for="luxRange">Ajuste rápido de 0 a 100 lux</label
-            ><input id="luxRange" type="range" min="0" max="100" step="1" value="20" /><div
-              class="presets"
+            ><small>Prévia da coleta</small></div
+          >
+          <div class="sensor-dock" id="painelSensor">
+            <div class="sensor-info"
+              ><p id="sensorAtual">Sem ponto de iluminação próximo</p
+              ><p id="coordenadas" class="coords"></p
+            ></div>
+            <div class="sensor-actions"
+              ><button
+                id="registrar"
+                type="button"
+                class="subtle"
+                title="Guardar uma leitura do sensor no microSD virtual"
+                >+ Leitura</button
+              ><button
+                id="automatico"
+                type="button"
+                class="subtle"
+                title="Ativar ou pausar leituras a cada segundo"
+                >Coleta automática</button
+              ></div
+            >
+          </div>
+          <p id="mapStatus" role="status">As leituras ficam neste dispositivo até descarregar.</p>
+        </section>
+        <aside id="controles" aria-label="Controles da simulação">
+          <section class="card lighting-card">
+            <h2><span class="step">1</span> Iluminação</h2>
+            <div class="point-modes"
+              ><button id="modoEditar" aria-pressed="true">Definir luz</button
+              ><button id="modoDirigir" aria-pressed="false">Dirigir</button></div
+            >
+            <p class="coords" id="pontoSelecionado">Toque na rua para definir um ponto.</p>
+            <div class="lux-field"
+              ><label for="lux">Luz do ponto <span>lux</span></label
+              ><input
+                id="lux"
+                type="number"
+                min="0"
+                max="88000"
+                step="0.1"
+                value="20"
+                inputmode="decimal"
+            /></div>
+            <label class="sr-only" for="luxRange">Ajuste rápido de 0 a 100 lux</label
+            ><input id="luxRange" type="range" min="0" max="100" step="1" value="20" />
+            <div class="presets"
               ><button type="button" data-lux="0">Apagado</button
               ><button type="button" data-lux="20">20 lux</button
               ><button type="button" data-lux="60">60 lux</button
               ><button type="button" data-lux="100">100 lux</button></div
-            ><button id="salvarPonto" class="primary full" type="button" disabled
-              >Salvar iluminação</button
-            ><button id="excluirPonto" class="subtle full" type="button" disabled
-              >Remover ponto selecionado</button
-            ><p class="helper" id="totalPontos"></p><hr /><h2>Sensor do caminhão</h2
-            ><p class="coords" id="coordenadas"></p
-            ><p id="sensorAtual" class="sensor-value">Sem ponto de iluminação próximo</p
-            ><p class="helper"
-              >Ao passar a até 20 m de um ponto, o caminhão registra automaticamente seus lux no
-              microSD virtual.</p
-            ><button id="registrar" class="primary full" type="button">＋ Registrar leitura</button
-            ><button id="automatico" class="subtle full" type="button"
-              >Iniciar coleta a cada 1 segundo</button
-            ></section
-          >
-          <section class="card" id="painelRota"
-            ><p class="eyebrow">02 / TRAJETO DO CAMINHÃO</p><h2>Monte sua rota</h2
-            ><p class="helper"
-              >Em Dirigir caminhão, toque em uma ou mais ruas ou pontos de iluminação. O caminhão
-              seguirá a ordem da lista.</p
-            ><ol id="listaParadas" class="stop-list"></ol
-            ><p id="resumoParadas" class="helper">Nenhuma parada selecionada.</p
-            ><button id="adicionarCentral" class="subtle full" type="button"
-              >Adicionar central (ETE FMC) à rota</button
-            ><button id="iniciarRota" class="primary full" type="button" disabled
-              >Iniciar rota</button
-            ><button id="limparRota" class="subtle full" type="button" disabled
-              >Limpar rota</button
-            ></section
-          >
-          <section class="card"
-            ><p class="eyebrow">03 / MICROSD VIRTUAL</p
-            ><div class="count-row"
-              ><h2>Leituras guardadas</h2><strong id="quantidade">0</strong></div
-            ><p class="helper"
-              >Ficam neste navegador até você descarregar. O mapa do site só muda após o envio.</p
-            ><ol id="leituras"></ol
-            ><button id="descarregar" class="dark full" type="button" disabled>Descarregar</button
-            ><p class="helper"
-              >Simula a conexão Bluetooth: pausa a coleta, envia o lote inteiro e esvazia o microSD
-              após a confirmação.</p
-            ></section
-          >
+            >
+            <div class="actions"
+              ><button id="salvarPonto" class="primary" type="button" disabled>Salvar ponto</button
+              ><button
+                id="excluirPonto"
+                class="subtle"
+                type="button"
+                disabled
+                title="Remover o ponto selecionado"
+                >Remover</button
+              ></div
+            >
+            <p class="helper" id="totalPontos"></p>
+          </section>
+          <section class="card route-card" id="painelRota">
+            <h2><span class="step">2</span> Rota <span class="hint">Toque nas paradas</span></h2>
+            <ol id="listaParadas" class="stop-list" aria-label="Paradas na ordem do percurso"></ol>
+            <p id="resumoParadas" class="helper">Nenhuma parada selecionada.</p>
+            <button id="adicionarCentral" class="subtle" type="button">+ Central · ETE FMC</button>
+            <div class="actions"
+              ><button id="iniciarRota" class="primary" type="button" disabled
+                >▶ Iniciar rota</button
+              ><button id="limparRota" class="subtle" type="button" disabled>Limpar</button></div
+            >
+          </section>
+          <section class="card download-card">
+            <div class="count-row"
+              ><h2><span class="step">3</span> Descarregar</h2
+              ><span class="reading-count"><strong id="quantidade">0</strong> leituras</span></div
+            >
+            <button id="descarregar" class="dark full" type="button" disabled>Descarregar</button>
+            <details class="recent-readings"
+              ><summary>Últimas leituras <span>microSD virtual</span></summary
+              ><ol id="leituras"></ol
+            ></details>
+          </section>
         </aside>
       </div>
       <div id="mensagem" class="notice" role="status" aria-live="polite"
-        >Pronto para registrar a primeira leitura.</div
+        >Toque no mapa para preparar sua primeira medição.</div
       >
-      <footer
-        ><span>LIGHTSENTINEL / GRUPO 3403</span
-        ><span id="rodape"
-          >GPS → Sensor → microSD virtual → Descarregar → Mapa simulado</span
-        ></footer
-      >
+      <footer><span id="rodape">GPS → Sensor → microSD → Central</span></footer>
     </main>
-    <dialog id="confirmarCentral" aria-labelledby="tituloCentral">
-      <h2 id="tituloCentral">Chegada à central</h2>
-      <p id="resumoCentral"></p>
-      <div class="central-actions">
-        <button id="cancelarCentral" class="subtle" type="button" autofocus>Agora não</button>
-        <button id="descarregarCentral" class="primary" type="button">Descarregar dados</button>
-      </div>
-    </dialog>
+    <dialog id="confirmarCentral" aria-labelledby="tituloCentral"
+      ><h2 id="tituloCentral">Chegada à central</h2><p id="resumoCentral"></p
+      ><div class="central-actions"
+        ><button id="cancelarCentral" class="subtle" type="button" autofocus>Agora não</button
+        ><button id="descarregarCentral" class="primary" type="button"
+          >Descarregar dados</button
+        ></div
+      ></dialog
+    >
   </body>
 </html>
