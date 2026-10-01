@@ -1,0 +1,290 @@
+/* Acabamento comum: fundo local, formulários e as duas visualizações de mapa. */
+.site-original,
+body.viewer {
+  background-color: #e9f2ff;
+  background-image:
+    url('/simulacao-assets/fundo-cidade.svg'),
+    radial-gradient(ellipse at 10% 90%, #c8dfff, transparent 65%);
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+}
+.site-original.access-page {
+  background-image:
+    url('/simulacao-assets/fundo-cidade.svg'),
+    radial-gradient(ellipse at bottom, #c8dfff, #e9f2ff 70%);
+}
+.site-original .choice-wrap {
+  background: transparent;
+}
+.site-original.auth-page {
+  padding: clamp(16px, 3vw, 40px);
+}
+.site-original.auth-page .login-card,
+.site-original.auth-page main.card {
+  width: min(520px, 100%);
+  padding: clamp(24px, 3vw, 40px);
+  background: #fffffff5;
+  box-shadow: 0 20px 70px #173f8518;
+}
+.site-original.auth-page h1 {
+  font-size: clamp(24px, 2.5vw, 30px);
+  text-align: center;
+}
+.site-original.auth-page .muted {
+  font-size: 13px;
+  text-align: center;
+}
+.site-original.auth-page .icon,
+.site-original.auth-page .icon-circle {
+  background: #eaf2ff;
+  color: #2563eb;
+  margin-bottom: 18px;
+}
+.site-original.content-page .container,
+.site-original.content-page .bar,
+.site-original.content-page main.page {
+  width: min(1480px, calc(100% - 40px));
+}
+.site-original.content-page .page {
+  padding-block: 24px;
+}
+.site-original.content-page .panel-header {
+  text-align: center;
+  justify-content: center;
+  gap: 18px;
+}
+.site-original.content-page .panel-header h2 {
+  font-size: 24px;
+}
+.site-original.content-page .panel-header .muted {
+  font-size: 13px;
+}
+.site-original.content-page .form-panel {
+  max-width: 850px;
+}
+.site-original.content-page .empty-state {
+  min-height: 230px;
+  display: grid;
+  place-content: center;
+  border: 1px dashed #a8c7f3;
+  background: #f5f9ff;
+}
+.site-original.content-page .grid {
+  grid-template-columns: minmax(300px, 390px) minmax(0, 1fr);
+  align-items: start;
+}
+.site-original.content-page .list,
+.site-original.content-page .occ-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+  gap: 16px;
+}
+.site-original.content-page .panel h2 {
+  text-align: center;
+}
+.site-original.content-page .photo-button,
+.site-original.content-page .resolve-btn {
+  background: #2563eb;
+}
+.site-original.map-view {
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+.map-header {
+  flex: 0 0 56px;
+  padding: 8px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: linear-gradient(115deg, #102c5b, #1e4e9b);
+  color: #fff;
+}
+.map-header .brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.map-header .brand-mark {
+  width: 36px;
+  height: 36px;
+}
+.map-header .brand strong {
+  font-size: 19px;
+  letter-spacing: -0.7px;
+}
+.map-header .brand small {
+  display: block;
+  font-size: 9px;
+  letter-spacing: 1.2px;
+  margin-top: 3px;
+  color: #d1e2ff;
+}
+.map-header a {
+  color: #e2efff;
+  font-size: 12px;
+  font-weight: 650;
+  text-decoration: none;
+}
+.map-badge {
+  border-radius: 30px;
+  padding: 8px 12px;
+  background: #ffffff15;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+}
+.map-main {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  max-width: 1800px;
+  margin: 0 auto;
+  padding: 10px 16px;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 9px;
+}
+.map-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  min-height: 29px;
+}
+.site-original .map-heading h1 {
+  margin: 0;
+  font-size: 22px;
+  letter-spacing: -0.8px;
+}
+.map-heading p {
+  margin: 0;
+  font-size: 12px;
+  color: #60728d;
+}
+.map-surface {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #dce6f5;
+  border-radius: 16px;
+  background: #fff;
+  overflow: hidden;
+  box-shadow: 0 4px 16px #1e408212;
+}
+.map-toolbar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 12px;
+}
+.map-toolbar strong {
+  font-size: 13px;
+}
+.map-toolbar small {
+  display: block;
+  font-size: 10px;
+  color: #647895;
+  margin-top: 3px;
+}
+.site-original .map-toolbar button {
+  min-height: 40px;
+  padding: 9px 11px;
+  font-size: 12px;
+}
+.site-original.map-view .map-box {
+  flex: 1;
+  min-height: 150px;
+  height: auto;
+  width: 100%;
+  border-radius: 0;
+  margin: 0;
+}
+.site-original.map-view .legend,
+.viewer .legend {
+  flex-shrink: 0;
+  padding: 8px 12px;
+  margin: 0;
+  font-size: 11px;
+  gap: 16px;
+  display: flex;
+  flex-wrap: wrap;
+}
+.site-original.map-view .legend .dot {
+  width: 8px;
+  height: 8px;
+}
+.site-original.map-view .telemetria {
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin: 0;
+  padding: 8px 12px;
+  border-top: 1px solid #edf2fa;
+}
+.site-original.map-view .measure-card {
+  padding: 8px 12px;
+  box-shadow: none;
+  border-radius: 10px;
+}
+.site-original.map-view .measure-card p {
+  margin: 0 0 4px;
+  font-size: 10px;
+}
+.site-original.map-view .measure-card b {
+  font-size: 14px;
+}
+.map-notice {
+  border: 1px solid #cbdffc;
+  background: #eaf3ff;
+  color: #29569a;
+  border-radius: 9px;
+  padding: 8px 12px;
+  font-size: 11px;
+  line-height: 1.4;
+}
+@media (max-width: 800px) {
+  .site-original.content-page .grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 640px) {
+  .map-header {
+    padding: 8px 12px;
+  }
+  .map-badge {
+    display: none;
+  }
+  .map-main {
+    padding: 8px;
+  }
+  .map-heading {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+  }
+  .site-original .map-heading h1 {
+    font-size: 18px;
+  }
+  .map-heading p {
+    font-size: 11px;
+  }
+  .site-original.map-view .telemetria {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .site-original.map-view .legend,
+  .viewer .legend {
+    font-size: 10px;
+    gap: 10px;
+  }
+  .site-original.content-page .container,
+  .site-original.content-page .bar,
+  .site-original.content-page main.page {
+    width: calc(100% - 24px);
+  }
+}

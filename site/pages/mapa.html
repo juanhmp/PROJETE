@@ -545,58 +545,37 @@
       }
     </style>
     <link rel="stylesheet" href="/simulacao-assets/identidade.css" />
+    <link rel="stylesheet" href="/simulacao-assets/paginas.css" />
+    <script defer src="/simulacao-assets/retorno-mapa.js"></script>
   </head>
-  <body class="site-original admin-bg">
-    <div class="backbar">
-      <div class="container back-inner">
-        <button class="btn btn-ghost" onclick="history.back()"> ← Voltar </button>
-      </div>
-    </div>
-    <main class="container page">
-      <section class="panel map-panel">
-        <div class="panel-header">
-          <div>
-            <h2>
-              <svg
-                class="ls-icon"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.7"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-              >
-                <path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3zM9 3v15M15 6v15" />
-              </svg>
-              Mapa de Calor - Santa Rita do Sapucaí
-            </h2>
-            <p class="muted">
-              O mapa mostra apenas áreas agregadas de iluminação. As leituras individuais recebidas
-              do caminhão não são exibidas visualmente.
-            </p>
-          </div>
-          <button class="btn btn-primary" id="refreshBtn"> Atualizar </button>
-        </div>
-        <div class="map-box" id="map"> </div>
-        <div class="legend">
-          <span>
-            <i class="dot" style="background: #00008b"> </i>
-            Mais iluminada
-          </span>
-          <span>
-            <i class="dot" style="background: #22c55e"> </i>
-            Iluminação boa
-          </span>
-          <span>
-            <i class="dot" style="background: #eab308"> </i>
-            Atenção
-          </span>
-          <span>
-            <i class="dot" style="background: #ef4444"> </i>
-            Menos iluminada
-          </span>
-        </div>
+  <body class="site-original map-view">
+    <header class="map-header">
+      <div class="brand"
+        ><img class="brand-mark" src="/simulacao-assets/marca.svg" alt="" /><div
+          ><strong>LightSentinel</strong><small>MONITORAMENTO • GRUPO 3403</small></div
+        ></div
+      >
+      <span class="map-badge">DADOS REAIS</span>
+      <a id="voltar" href="/usuario">Área do usuário ↗</a>
+    </header>
+    <main class="map-main">
+      <div class="map-heading"
+        ><h1>Mapa de calor</h1><p>Iluminação monitorada em Santa Rita do Sapucaí.</p></div
+      >
+      <section class="map-surface">
+        <div class="map-toolbar"
+          ><div
+            ><strong>Santa Rita do Sapucaí</strong
+            ><small>Explore o mapa para comparar a iluminação das regiões.</small></div
+          ><button class="btn btn-primary" id="refreshBtn">Atualizar</button></div
+        >
+        <div class="map-box" id="map" aria-label="Mapa de calor de Santa Rita do Sapucaí"></div>
+        <div class="legend"
+          ><span><i class="dot" style="background: #ef4444"></i>Menos iluminada</span
+          ><span><i class="dot" style="background: #eab308"></i>Atenção</span
+          ><span><i class="dot" style="background: #22c55e"></i>Iluminação boa</span
+          ><span><i class="dot" style="background: #00008b"></i>Mais iluminada</span></div
+        >
         <div class="measure-list telemetria" aria-label="Dados da última medição">
           <div class="measure-card"><p>Data da última medição</p><b id="dataMedicao">—</b></div>
           <div class="measure-card"
@@ -607,10 +586,10 @@
           >
           <div class="measure-card"><p>Satélites na medição</p><b id="satelitesMedicao">—</b></div>
         </div>
-        <div class="info-box" id="resumoMapa" style="margin-bottom: 0">
-          Aguardando dados do mapa de calor...
-        </div>
       </section>
+      <div class="map-notice" id="resumoMapa" role="status"
+        >Aguardando dados do mapa de calor...</div
+      >
     </main>
   </body>
   <script>
