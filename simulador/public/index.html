@@ -53,11 +53,17 @@
               ><button id="seguir" aria-pressed="true">Seguir caminhão ✓</button
               ><label for="velocidade"
                 >Ritmo
-                <select id="velocidade"
-                  ><option value="1">1×</option
-                  ><option value="3" selected>3×</option
-                  ><option value="6">6×</option></select
-                ></label
+                <input
+                  id="velocidade"
+                  type="number"
+                  min="1"
+                  max="20"
+                  step="1"
+                  value="3"
+                  inputmode="numeric"
+                  aria-label="Ritmo da simulação de 1 a 20 vezes"
+                />
+                <span>×</span></label
               ></div
             ></div
           ><div class="legend"

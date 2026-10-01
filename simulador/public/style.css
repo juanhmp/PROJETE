@@ -470,7 +470,9 @@ footer {
   gap: 6px;
   padding: 8px 14px;
 }
-.drive-controls select {
+.drive-controls input {
+  width: 64px;
+  min-height: 36px;
   border: 0;
   background: #edf2f6;
   border-radius: 8px;

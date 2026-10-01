@@ -65,6 +65,15 @@ window.criarNavegacao = function ({
     cancelarPedido();
     pausar(gravar);
   }
+  function ritmo() {
+    const valor = Number($('velocidade').value);
+    return Number.isFinite(valor) && $('velocidade').value !== ''
+      ? Math.max(1, Math.min(20, Math.round(valor)))
+      : 3;
+  }
+  $('velocidade').onchange = () => {
+    $('velocidade').value = ritmo();
+  };
   function tick(agora) {
     if (!andando || travado() || document.hidden) {
       pausar();
@@ -73,12 +82,12 @@ window.criarNavegacao = function ({
     if (!anterior) anterior = agora;
     const dt = Math.min(0.15, (agora - anterior) / 1000);
     anterior = agora;
-    metros = Math.min(rota.total, metros + dt * (30 / 3.6) * Number($('velocidade').value));
+    metros = Math.min(rota.total, metros + dt * (30 / 3.6) * ritmo());
     gps(Percurso.posicao(rota, metros));
     aoMover?.();
     if (!andando) return;
     $('distanciaRota').textContent =
-      `${Math.ceil(rota.total - metros)} m restantes • 30 km/h • ${$('velocidade').value}×`;
+      `${Math.ceil(rota.total - metros)} m restantes • 30 km/h • ${ritmo()}×`;
     if (seguir && agora - ultimaCamera > 200) {
       mapa.panTo(truck.getLatLng(), { animate: false });
       ultimaCamera = agora;
