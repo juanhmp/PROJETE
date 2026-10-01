@@ -1,7 +1,7 @@
 :root {
   font-family: Inter, 'Segoe UI', Arial, sans-serif;
-  color: #183a32;
-  background: #eef3ef;
+  color: #142c52;
+  background: #f0f5ff;
   font-synthesis: none;
 }
 * {
@@ -24,8 +24,9 @@ header {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  background: #fff;
-  border-bottom: 1px solid #dce6df;
+  background: linear-gradient(115deg, #102c5b, #1e4e9b);
+  color: #fff;
+  border-bottom: 1px solid #dce6f5;
 }
 .brand {
   display: flex;
@@ -40,7 +41,7 @@ header {
   display: block;
   font-size: 9px;
   letter-spacing: 1.2px;
-  color: #728479;
+  color: #d1e2ff;
   margin-top: 3px;
 }
 .logo {
@@ -49,7 +50,7 @@ header {
   height: 36px;
   display: grid;
   place-items: center;
-  background: #183f34;
+  background: #15346a;
   border-radius: 11px;
   color: #fff;
   font-size: 25px;
@@ -59,18 +60,18 @@ header {
   position: absolute;
   right: 5px;
   top: -1px;
-  color: #c5e989;
+  color: #75cfff;
 }
 a {
-  color: #3b6552;
+  color: #2563eb;
   font-size: 12px;
   font-weight: 650;
 }
 .badge {
   border-radius: 30px;
   padding: 8px 12px;
-  background: #e8f0df;
-  color: #547338;
+  background: #ffffff15;
+  color: #e2efff;
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.4px;
@@ -101,7 +102,7 @@ h1 {
 .heading p {
   margin: 0;
   font-size: 12px;
-  color: #6c8071;
+  color: #60728d;
 }
 .layout {
   display: grid;
@@ -112,9 +113,9 @@ h1 {
 .map-card,
 .card {
   background: #fff;
-  border: 1px solid #dce6df;
+  border: 1px solid #dce6f5;
   border-radius: 14px;
-  box-shadow: 0 4px 16px #17332e05;
+  box-shadow: 0 4px 16px #1e408212;
   min-width: 0;
 }
 .map-card {
@@ -137,7 +138,7 @@ h1 {
 .map-top small {
   display: block;
   font-size: 11px;
-  color: #728679;
+  color: #647895;
   margin-top: 3px;
 }
 .map-wrap {
@@ -148,7 +149,7 @@ h1 {
 #map {
   height: 100%;
   width: 100%;
-  background: #e6ece7;
+  background: #e7edf7;
 }
 #controles {
   display: grid;
@@ -175,22 +176,22 @@ h2 {
   place-items: center;
   flex-shrink: 0;
   font-size: 11px;
-  color: #456537;
-  background: #edf3e6;
+  color: #235bc0;
+  background: #edf4ff;
 }
 .hint {
   margin-left: auto;
   font-size: 10px;
   font-weight: 400;
-  color: #7a8c80;
+  color: #647895;
 }
 button {
   min-height: 40px;
   padding: 9px 11px;
-  border: 1px solid #dce6df;
+  border: 1px solid #dce6f5;
   border-radius: 9px;
   background: #fff;
-  color: #315743;
+  color: #244b82;
   font:
     650 12px Inter,
     'Segoe UI',
@@ -210,21 +211,21 @@ button:focus-visible,
 input:focus-visible,
 a:focus-visible,
 summary:focus-visible {
-  outline: 3px solid #85ad53;
+  outline: 3px solid #3b82f6;
   outline-offset: 2px;
 }
 .primary {
-  background: #c5e989;
-  color: #2d491f;
-  border-color: #c5e989;
+  background: linear-gradient(115deg, #2563eb, #1d4ed8);
+  color: #fff;
+  border-color: #2563eb;
 }
 .dark {
-  background: #204e3c;
+  background: #2563eb;
   color: #fff;
-  border-color: #204e3c;
+  border-color: #2563eb;
 }
 .subtle {
-  background: #f2f6f1;
+  background: #f0f5ff;
 }
 .full {
   width: 100%;
@@ -244,7 +245,7 @@ summary:focus-visible {
   gap: 5px;
   padding: 3px;
   border-radius: 10px;
-  background: #edf2ed;
+  background: #eaf1fc;
 }
 .point-modes button {
   min-height: 36px;
@@ -252,12 +253,12 @@ summary:focus-visible {
   background: transparent;
 }
 .point-modes button[aria-pressed='true'] {
-  background: #204e3c;
+  background: linear-gradient(115deg, #2563eb, #1d4ed8);
   color: #fff;
-  box-shadow: 0 2px 5px #204e3c20;
+  box-shadow: 0 2px 5px #2563eb20;
 }
 .coords {
-  color: #7a8b7e;
+  color: #647895;
   margin: 0;
   font-size: 10px;
   font-variant-numeric: tabular-nums;
@@ -280,21 +281,21 @@ label {
 .lux-field label span {
   display: block;
   margin-top: 2px;
-  color: #849486;
+  color: #60728d;
   font-size: 10px;
   font-weight: 400;
 }
 input[type='number'] {
-  border: 1px solid #d4e1d5;
+  border: 1px solid #cadcf6;
   border-radius: 9px;
   font:
     700 23px Inter,
     'Segoe UI',
     Arial,
     sans-serif;
-  color: #264d3b;
+  color: #183b72;
   padding: 6px 9px;
-  background: #f7faf5;
+  background: #f5f8ff;
   width: 125px;
   min-height: 40px;
 }
@@ -302,7 +303,7 @@ input[type='range'] {
   width: 100%;
   height: 18px;
   margin: 0;
-  accent-color: #568043;
+  accent-color: #2563eb;
 }
 .presets {
   display: flex;
@@ -315,7 +316,7 @@ input[type='range'] {
   font-size: 10px;
 }
 .helper {
-  color: #7b8b7d;
+  color: #60728d;
   font-size: 10px;
   line-height: 1.3;
   margin: 0;
@@ -338,14 +339,14 @@ input[type='range'] {
 .stop-list:empty::before {
   content: 'Escolha Dirigir e toque nas ruas.';
   font-size: 11px;
-  color: #839286;
+  color: #60728d;
 }
 .stop-list li {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 5px;
-  border-bottom: 1px solid #eef2ed;
+  border-bottom: 1px solid #edf2fa;
   padding: 3px 0;
   font-size: 11px;
 }
@@ -377,12 +378,12 @@ input[type='range'] {
 }
 .reading-count {
   font-size: 10px;
-  color: #7b8c7d;
+  color: #60728d;
   white-space: nowrap;
 }
 .reading-count strong {
   font-size: 21px;
-  color: #466d37;
+  color: #2563eb;
   margin-right: 3px;
 }
 .download-card {
@@ -392,7 +393,7 @@ input[type='range'] {
 }
 .recent-readings {
   font-size: 10px;
-  color: #718477;
+  color: #60728d;
 }
 .recent-readings summary {
   cursor: pointer;
@@ -400,7 +401,7 @@ input[type='range'] {
 }
 .recent-readings summary span {
   float: right;
-  color: #95a293;
+  color: #667b99;
 }
 #leituras {
   list-style: none;
@@ -409,8 +410,8 @@ input[type='range'] {
   font-size: 11px;
   background: #fff;
   border-radius: 10px;
-  border: 1px solid #dce6df;
-  box-shadow: 0 4px 16px #17332e15;
+  border: 1px solid #dce6f5;
+  box-shadow: 0 4px 16px #1e408218;
 }
 .recent-readings[open] #leituras {
   position: absolute;
@@ -421,7 +422,7 @@ input[type='range'] {
 }
 #leituras li {
   padding: 7px 0;
-  border-bottom: 1px solid #eef2ed;
+  border-bottom: 1px solid #edf2fa;
 }
 .legend {
   display: flex;
@@ -430,7 +431,7 @@ input[type='range'] {
   align-items: center;
   padding: 8px 12px;
   font-size: 10px;
-  color: #617764;
+  color: #526a8d;
 }
 .legend span {
   display: flex;
@@ -445,15 +446,15 @@ input[type='range'] {
 .legend small {
   font-size: 10px;
   margin-left: auto;
-  color: #95a293;
+  color: #667b99;
 }
 .sensor-dock {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  background: #f7faf5;
-  border-top: 1px solid #e9efe7;
+  background: #f5f8ff;
+  border-top: 1px solid #dfe9fa;
   padding: 8px 12px;
 }
 .sensor-info {
@@ -474,14 +475,14 @@ input[type='range'] {
 }
 #mapStatus {
   font-size: 10px;
-  color: #829080;
+  color: #60728d;
   margin: 0;
   padding: 5px 12px;
 }
 .notice {
-  border: 1px solid #d5e3ce;
-  background: #e8f1e1;
-  color: #4a6740;
+  border: 1px solid #cbdffc;
+  background: #eaf3ff;
+  color: #29569a;
   border-radius: 9px;
   padding: 8px 12px;
   font-size: 11px;
@@ -505,7 +506,7 @@ footer {
   gap: 10px;
   align-items: center;
   padding: 10px 13px;
-  background: #243b36ed;
+  background: #102c5bf5;
   color: #fff;
   border-radius: 12px;
   box-shadow: 0 4px 16px #18273325;
@@ -513,7 +514,7 @@ footer {
 }
 .nav-direction {
   font-size: 26px;
-  color: #c5e989;
+  color: #75cfff;
 }
 .navigation strong {
   display: block;
@@ -522,7 +523,7 @@ footer {
 .navigation small {
   display: block;
   font-size: 10px;
-  color: #c5d4cc;
+  color: #c5dcff;
   margin-top: 3px;
 }
 .drive-controls {
@@ -539,7 +540,7 @@ footer {
 }
 .drive-controls > * {
   pointer-events: auto;
-  box-shadow: 0 3px 14px #18302620;
+  box-shadow: 0 3px 14px #15346a20;
 }
 .drive-controls button {
   border-radius: 22px;
@@ -548,8 +549,8 @@ footer {
 }
 .drive-controls button[aria-pressed='true'] {
   color: #fff;
-  background: #204e3c;
-  border-color: #204e3c;
+  background: #2563eb;
+  border-color: #2563eb;
 }
 .drive-controls label {
   display: flex;
@@ -835,9 +836,30 @@ input {
 button:focus-visible,
 summary:focus-visible,
 input:focus-visible {
-  outline: 3px solid #598f74;
+  outline: 3px solid #3b82f6;
   outline-offset: 2px;
 }
 button:disabled {
   cursor: not-allowed;
+}
+header a {
+  color: #e2efff;
+  text-decoration: none;
+}
+header a:hover {
+  text-decoration: underline;
+}
+.card {
+  box-shadow: 0 5px 20px #1e408210;
+}
+.card h2 > .step {
+  background: #eaf2ff;
+  color: #2563eb;
+}
+.heading h1 {
+  color: #14396e;
+}
+.lux-field input {
+  background: #f5f8ff;
+  border-color: #cadcf6;
 }
