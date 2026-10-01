@@ -9,6 +9,7 @@ const PORT = Number(process.env.SIMULADOR_PORT || 3001);
 const DESTINO = new URL(process.env.LIGHTSENTINEL_URL || 'http://127.0.0.1:3000');
 const PUBLIC = path.join(__dirname, 'public');
 const tipos = {
+  '.svg': 'image/svg+xml',
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8',

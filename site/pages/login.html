@@ -586,22 +586,55 @@
         }
       }
     </style>
+    <link rel="stylesheet" href="/simulacao-assets/identidade.css" />
   </head>
-  <body>
+  <body class="site-original">
     <main class="choice-wrap">
       <section class="choice-card">
         <div class="choice-head">
-          <h1> Sistema de Iluminação Pública </h1>
-          <p class="muted"> Escolha como deseja acessar o sistema </p>
+          <div class="ls-brand"
+            ><img src="/simulacao-assets/marca.svg" alt="" /><span>LightSentinel</span
+            ><small>3403</small></div
+          >
+          <h1> Iluminação que você pode acompanhar </h1>
+          <p class="muted"> Explore as medições da cidade ou gerencie o monitoramento. </p>
         </div>
         <div class="choice-grid">
           <a class="choice" href="/usuario">
-            <div class="choice-icon"> 👤 </div>
+            <div class="choice-icon">
+              <svg
+                class="ls-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <circle cx="12" cy="8" r="4" />
+                <path d="M4 21v-2a8 8 0 0 1 16 0v2" />
+              </svg>
+            </div>
             <h2> Acessar como usuário </h2>
             <p class="muted"> Registrar ocorrências e consultar o mapa de iluminação. </p>
           </a>
           <a class="choice" href="/login-admin">
-            <div class="choice-icon"> 🛡️ </div>
+            <div class="choice-icon">
+              <svg
+                class="ls-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M12 3 3 7v6c0 5 9 9 9 9s9-4 9-9V7z" />
+                <path d="m8 12 3 3 5-6" />
+              </svg>
+            </div>
             <h2> Acessar como administrador </h2>
             <p class="muted"> Acesso restrito às informações administrativas do sistema. </p>
           </a>

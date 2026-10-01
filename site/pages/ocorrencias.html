@@ -581,8 +581,9 @@
         color: #475569;
       }
     </style>
+    <link rel="stylesheet" href="/simulacao-assets/identidade.css" />
   </head>
-  <body class="admin-bg">
+  <body class="site-original admin-bg">
     <div class="backbar">
       <div class="container back-inner">
         <a class="btn btn-ghost" href="/admin"> ← Voltar </a>
@@ -592,7 +593,22 @@
       <section class="panel">
         <div class="panel-header">
           <div>
-            <h2> ⚠ Avisos e Ocorrências </h2>
+            <h2>
+              <svg
+                class="ls-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="m12 3 10 18H2zM12 9v5" />
+                <circle cx="12" cy="17" r=".6" />
+              </svg>
+              Avisos e Ocorrências
+            </h2>
             <p class="muted"> Registros enviados pelos usuários </p>
           </div>
           <div>
@@ -684,7 +700,7 @@
             : '';
           return `<article class="occ-card occ-${ocorrencia.priority}">
         <div class="occ-row">
-          <div class="occ-source">💡</div>
+          <div class="occ-source"><svg class="ls-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6M9 21h6M8 15a7 7 0 1 1 8 0l-1 3H9z"/></svg></div>
           <div class="occ-main">
             <div class="occ-head">
               <h3>${textoSeguro(ocorrencia.location)}</h3>

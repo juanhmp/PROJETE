@@ -533,11 +533,16 @@
         }
       }
     </style>
+    <link rel="stylesheet" href="/simulacao-assets/identidade.css" />
   </head>
-  <body class="user-bg">
+  <body class="site-original user-bg">
     <nav class="navbar">
       <div class="container nav-inner">
         <div class="nav-title">
+          <div class="ls-brand"
+            ><img src="/simulacao-assets/marca.svg" alt="" /><span>LightSentinel</span
+            ><small>3403</small></div
+          >
           <h1> Área do Usuário </h1>
           <p> Consulte o mapa e registre problemas de iluminação pública </p>
         </div>
@@ -547,17 +552,57 @@
     <main class="container page">
       <div class="menu-grid user-grid">
         <a class="menu-card" href="/registrar">
-          <div class="menu-icon green"> ＋ </div>
+          <div class="menu-icon green">
+            <svg
+              class="ls-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M12 4v16M4 12h16" />
+            </svg>
+          </div>
           <h2> Registrar Ocorrência </h2>
           <p> Informe um problema de iluminação encontrado na cidade </p>
         </a>
         <a class="menu-card" href="/mapa">
-          <div class="menu-icon red"> 🗺 </div>
+          <div class="menu-icon red">
+            <svg
+              class="ls-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3zM9 3v15M15 6v15" />
+            </svg>
+          </div>
           <h2> Mapa de Calor </h2>
           <p> Veja as regiões monitoradas em Santa Rita do Sapucaí </p>
         </a>
         <a class="menu-card" href="/mapa-simulado">
-          <div class="menu-icon blue">🚚</div>
+          <div class="menu-icon blue"
+            ><svg
+              class="ls-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M3 6h11v12H3zM14 10h4l3 4v4h-7M14 14h7" />
+              <circle cx="7" cy="18" r="2" />
+              <circle cx="18" cy="18" r="2" /></svg
+          ></div>
           <h2>Mapa de Calor Simulado</h2>
           <p>Acompanhe as leituras da demonstração do LightSentinel</p>
         </a>

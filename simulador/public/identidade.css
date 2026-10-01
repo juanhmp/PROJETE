@@ -1,0 +1,282 @@
+/* Identidade compartilhada pelo site e pelo simulador. O mapa mantém sua escala de lux. */
+:root {
+  --ls-ink: #183a32;
+  --ls-primary: #214e40;
+  --ls-muted: #66776f;
+  --ls-border: #dce6df;
+  --ls-surface: #f1f5f2;
+  --ls-shadow: 0 12px 36px rgba(24, 58, 50, 0.07);
+}
+.ls-icon {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+.ls-brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--ls-ink);
+  font-size: 14px;
+  font-weight: 750;
+  letter-spacing: -0.3px;
+  margin-bottom: 8px;
+}
+.ls-brand img {
+  width: 30px;
+  height: 30px;
+}
+.ls-brand small {
+  color: var(--ls-muted);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  margin-left: 4px;
+}
+:where(a, button, input, textarea, select, summary):focus-visible {
+  outline: 3px solid #598f74;
+  outline-offset: 3px;
+}
+.site-original {
+  background: var(--ls-surface);
+  color: var(--ls-ink);
+  font-family: 'Segoe UI', Inter, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.site-original h1,
+.site-original h2,
+.site-original h3 {
+  color: var(--ls-ink);
+  letter-spacing: -0.6px;
+  line-height: 1.25;
+}
+.site-original p {
+  line-height: 1.55;
+}
+.site-original .muted,
+.site-original .nav-title p {
+  color: var(--ls-muted);
+}
+.site-original .choice-wrap {
+  background: radial-gradient(ellipse at top left, #e3eee5, transparent 65%), var(--ls-surface);
+}
+.site-original .choice-card {
+  width: min(840px, 100%);
+  border: 1px solid var(--ls-border);
+  box-shadow: var(--ls-shadow);
+  padding: 40px;
+  border-radius: 24px;
+}
+.site-original .choice-head .ls-brand {
+  justify-content: center;
+  margin-bottom: 20px;
+}
+.site-original .choice-head h1 {
+  font-size: clamp(27px, 4vw, 36px);
+}
+.site-original .choice,
+.site-original .menu-card {
+  border: 1px solid var(--ls-border);
+  box-shadow: none;
+  text-align: left;
+  transition:
+    border-color 160ms,
+    box-shadow 160ms,
+    transform 160ms;
+}
+.site-original .choice:hover,
+.site-original .menu-card:hover {
+  border-color: #83ab94;
+  box-shadow: var(--ls-shadow);
+  transform: translateY(-2px);
+}
+.site-original .choice h2,
+.site-original .menu-card h2 {
+  font-size: 20px;
+}
+.site-original .choice-icon,
+.site-original .menu-icon,
+.site-original .icon-circle,
+.site-original .icon,
+.site-original .occ-source {
+  display: grid;
+  place-items: center;
+  background: #e9f1eb;
+  color: var(--ls-primary);
+  border-radius: 16px;
+}
+.site-original .choice-icon,
+.site-original .menu-icon {
+  width: 56px;
+  height: 56px;
+  margin: 0 0 22px;
+}
+.site-original .choice-icon .ls-icon,
+.site-original .menu-icon .ls-icon {
+  width: 28px;
+  height: 28px;
+}
+.site-original .user-grid {
+  grid-template-columns: repeat(3, 1fr);
+  max-width: none;
+}
+.site-original .menu-card {
+  padding: 28px;
+}
+.site-original .menu-card p {
+  color: var(--ls-muted);
+  font-size: 14px;
+}
+.site-original .navbar,
+.site-original .backbar {
+  background: #fff;
+  border-bottom: 1px solid var(--ls-border);
+  box-shadow: none;
+}
+.site-original .nav-inner {
+  padding-top: 16px;
+  padding-bottom: 16px;
+}
+.site-original .nav-title h1 {
+  font-size: 22px;
+}
+.site-original .card,
+.site-original .panel,
+.site-original .login-card,
+.site-original .status-box {
+  border: 1px solid var(--ls-border);
+  border-radius: 20px;
+  box-shadow: var(--ls-shadow);
+}
+.site-original .btn,
+.site-original button,
+.site-original .back {
+  border-radius: 11px;
+  min-height: 44px;
+}
+.site-original .btn-primary,
+.site-original .btn-green,
+.site-original .primary,
+.site-original button.blue,
+.site-original .role-btn.active {
+  background: var(--ls-primary);
+  color: #fff;
+}
+.site-original .btn-primary:hover,
+.site-original .btn-green:hover,
+.site-original .primary:hover {
+  background: #153a2f;
+}
+.site-original .btn-gray,
+.site-original .gray,
+.site-original .back {
+  background: #eaf0ec;
+  color: var(--ls-ink);
+}
+.site-original .btn-ghost {
+  color: var(--ls-ink);
+  background: #f1f5f2;
+}
+.site-original button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+.site-original input,
+.site-original textarea,
+.site-original select {
+  border-color: #cad9cf;
+  border-radius: 11px;
+  color: var(--ls-ink);
+}
+.site-original input:focus,
+.site-original textarea:focus,
+.site-original select:focus {
+  border-color: #598f74;
+  box-shadow: 0 0 0 3px #598f7420;
+}
+.site-original .info-box,
+.site-original .contact {
+  background: #edf4ee;
+  border-color: #cbded0;
+  color: #315d46;
+  border-radius: 12px;
+}
+.site-original .phone {
+  color: var(--ls-primary);
+}
+.site-original .measure-card {
+  background: #f5f8f5;
+  border: 1px solid var(--ls-border);
+  border-radius: 14px;
+  padding: 18px;
+}
+.site-original .measure-card b {
+  color: var(--ls-ink);
+  font-variant-numeric: tabular-nums;
+}
+.site-original .measure-card p {
+  color: var(--ls-muted);
+}
+.site-original .panel-header h2 .ls-icon {
+  margin-right: 8px;
+}
+.site-original .top {
+  background: var(--ls-primary);
+}
+.site-original .top h1,
+.site-original .top .ls-brand {
+  color: #fff;
+}
+.site-original .top .ls-brand small {
+  color: #d5e4d9;
+}
+.site-original .login-head .ls-brand,
+.site-original .head .ls-brand {
+  justify-content: center;
+}
+.site-original .light {
+  color: var(--ls-ink);
+}
+@media (max-width: 980px) {
+  .site-original .menu-grid:not(.user-grid) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 700px) {
+  .site-original .user-grid {
+    grid-template-columns: 1fr;
+  }
+  .site-original .menu-card {
+    padding: 22px;
+  }
+  .site-original .choice-card {
+    padding: 24px;
+  }
+  .site-original .choice-grid {
+    grid-template-columns: 1fr;
+  }
+  .site-original .choice {
+    padding: 22px;
+  }
+  .site-original .ls-brand small {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition: none !important;
+    animation: none !important;
+  }
+}
+.site-original main.card > .btn {
+  background: var(--ls-primary);
+  color: #fff;
+}
+.site-original main.card > .ls-brand {
+  justify-content: center;
+  margin-bottom: 22px;
+}

@@ -533,11 +533,16 @@
         }
       }
     </style>
+    <link rel="stylesheet" href="/simulacao-assets/identidade.css" />
   </head>
-  <body class="admin-bg">
+  <body class="site-original admin-bg">
     <nav class="navbar">
       <div class="container nav-inner">
         <div class="nav-title">
+          <div class="ls-brand"
+            ><img src="/simulacao-assets/marca.svg" alt="" /><span>LightSentinel</span
+            ><small>3403</small></div
+          >
           <h1> Painel do Administrador </h1>
           <p> Gestão e monitoramento da iluminação pública </p>
         </div>
@@ -547,23 +552,79 @@
     <main class="container page">
       <div class="menu-grid">
         <a class="menu-card" href="/mapa">
-          <div class="menu-icon red"> 🗺 </div>
+          <div class="menu-icon red">
+            <svg
+              class="ls-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3zM9 3v15M15 6v15" />
+            </svg>
+          </div>
           <h2> Mapa de Calor </h2>
           <p> Visualize as medições em Santa Rita do Sapucaí </p>
         </a>
         <a class="menu-card" href="/ocorrencias">
-          <div class="menu-icon yellow"> ⚠ </div>
+          <div class="menu-icon yellow">
+            <svg
+              class="ls-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="m12 3 10 18H2zM12 9v5" />
+              <circle cx="12" cy="17" r=".6" />
+            </svg>
+          </div>
           <h2> Ocorrências </h2>
           <p> Gerencie os avisos registrados pelos usuários </p>
         </a>
         <div class="menu-card">
-          <div class="menu-icon blue"> 📡 </div>
+          <div class="menu-icon blue">
+            <svg
+              class="ls-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M4 4a16 16 0 0 1 16 16M4 10a10 10 0 0 1 10 10" />
+              <circle cx="5" cy="19" r="2" />
+            </svg>
+          </div>
           <h2> Medições </h2>
           <p class="stat-number" id="totalMedicoes"> 0 </p>
           <p> leituras armazenadas </p>
         </div>
         <div class="menu-card">
-          <div class="menu-icon purple"> 📋 </div>
+          <div class="menu-icon purple">
+            <svg
+              class="ls-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <rect x="5" y="4" width="14" height="18" rx="2" />
+              <rect x="9" y="2" width="6" height="4" rx="1" />
+              <path d="M9 11h6M9 16h6" />
+            </svg>
+          </div>
           <h2> Ocorrências </h2>
           <p class="stat-number" id="totalOcorrencias"> 0 </p>
           <p> registros armazenados </p>

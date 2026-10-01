@@ -818,3 +818,26 @@ footer {
     font-size: 9px;
   }
 }
+
+/* Elementos da mesma identidade usada no site principal. */
+.brand-mark {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+}
+button,
+summary,
+input {
+  transition:
+    border-color 140ms,
+    background-color 140ms;
+}
+button:focus-visible,
+summary:focus-visible,
+input:focus-visible {
+  outline: 3px solid #598f74;
+  outline-offset: 2px;
+}
+button:disabled {
+  cursor: not-allowed;
+}
