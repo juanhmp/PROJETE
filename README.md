@@ -35,30 +35,39 @@ Com isso, o projeto procura facilitar:
 O sistema é dividido em duas partes principais: **dispositivo embarcado** e **plataforma web**.
 
 ```text
-┌──────────────────────────────┐
-│       CAMINHÃO / CAMPO       │
-│                              │
-│  TSL2591 + GPS NEO-6M        │
-│            ↓                 │
-│          STM32               │
-│            ↓                 │
-│          MicroSD             │
-└──────────────┬───────────────┘
-               │
-        retorno à base
-               │ Bluetooth
-               ↓
-┌──────────────────────────────┐
-│            BASE              │
-│                              │
-│     Node.js / Express        │
-│            ↓                 │
-│          SQLite              │
-│            ↓                 │
-│  processamento/agregação     │
-│            ↓                 │
-│       Mapa de calor          │
-└──────────────────────────────┘
+┌────────────────────────────────────────────┐
+│     FASE 1 – BLUETOOTH DESCONECTADO        │
+│              (caminhão / campo)            │
+│                                            │
+│  TSL2591 + GPS NEO-M8N                     │
+│            ↓                               │
+│          STM32  ── repete a cada ~1 s      │
+│            ↓                               │
+│   MicroSD (dados.txt acumula as medições)  │
+└─────────────────────┬──────────────────────┘
+                      │
+   retorno à base: HC-05 conecta (STATE = 1)
+   → STM32 para de medir e fecha o arquivo
+                      │
+                      ↓
+┌────────────────────────────────────────────┐
+│       FASE 2 – BLUETOOTH CONECTADO         │
+│                  (base)                    │
+│                                            │
+│  STM32 lê o MicroSD e transmite o que foi  │
+│  medido fora da conexão                    │
+│            ↓                               │
+│  HC-05 (Bluetooth SPP)                     │
+│            ↓                               │
+│  Aplicação C# (pasta Bluetooth/)           │
+│  ponte hardware ↔ software                 │
+│            ↓ HTTP                          │
+│  Node.js / Express                         │
+│            ↓                               │
+│          SQLite                            │
+│            ↓                               │
+│  processamento/agregação → Mapa de calor   │
+└────────────────────────────────────────────┘
 ```
 
 Durante o percurso, não é necessário manter conexão permanente com o servidor. As leituras ficam armazenadas no cartão de memória e são transmitidas posteriormente em lote.
@@ -77,15 +86,15 @@ O **STM32** é o microcontrolador principal do dispositivo. Ele coordena a aquis
 
 O **TSL2591** é utilizado para medir a intensidade luminosa do ambiente. Suas leituras representam a informação principal utilizada posteriormente para construir o mapa de iluminação.
 
-### 📍 GPS NEO-6M
+### 📍 GPS NEO-8M
 
-O **GPS NEO-6M** fornece as coordenadas geográficas do dispositivo. Dessa maneira, cada leitura de luminosidade pode ser associada a uma latitude e longitude.
+O **GPS NEO-8M** fornece as coordenadas geográficas do dispositivo. Dessa maneira, cada leitura de luminosidade pode ser associada a uma latitude e longitude.
 
 ### 💾 MicroSD
 
 O cartão **MicroSD** é responsável pelo armazenamento local das medições. Isso permite que o caminhão percorra a cidade e continue coletando informações mesmo sem comunicação direta com a base.
 
-### 📡 Bluetooth
+### 📡 Bluetooth - HC-05
 
 A comunicação **Bluetooth** é utilizada quando o caminhão retorna e se aproxima da base. Nesse momento, as medições acumuladas durante o percurso são enviadas para o sistema em um único lote.
 
