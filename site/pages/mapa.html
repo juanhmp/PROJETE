@@ -7,6 +7,7 @@
     <link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+    <script src="/simulacao-assets/calor-fixo.js?v=20261004-restaurado"></script>
     <style>
       * {
         box-sizing: border-box;
@@ -574,7 +575,7 @@
           ><span><i class="dot" style="background: #ef4444"></i>Menos iluminada</span
           ><span><i class="dot" style="background: #eab308"></i>Atenção</span
           ><span><i class="dot" style="background: #22c55e"></i>Iluminação boa</span
-          ><span><i class="dot" style="background: #00008b"></i>Mais iluminada</span></div
+          ><span><i class="dot" style="background: #0000ff"></i>Mais iluminada</span></div
         >
         <div class="measure-list telemetria" aria-label="Dados da última medição">
           <div class="measure-card"><p>Data da última medição</p><b id="dataMedicao">—</b></div>
@@ -643,6 +644,7 @@
 
     let heat = null;
     let areasMapa = [];
+    let assinaturaCalor = null;
 
     function intensidade(luminosidade) {
       const valor = Math.max(0, Math.min(100, Number(luminosidade) || 0));
@@ -650,51 +652,16 @@
       return Math.max(0.04, Math.min(0.92, (100 - valor) / 100));
     }
 
-    function configuracaoPorZoom() {
-      const zoom = mapa.getZoom();
-      if (zoom <= 13) return { radius: 18, blur: 16 };
-      if (zoom === 14) return { radius: 27, blur: 21 };
-      if (zoom === 15) return { radius: 34, blur: 26 };
-      if (zoom === 16) return { radius: 40, blur: 30 };
-      if (zoom === 17) return { radius: 46, blur: 34 };
-      return { radius: 50, blur: 38 };
-    }
-
     function desenharHeatmap() {
-      if (heat) {
-        mapa.removeLayer(heat);
-        heat = null;
-      }
-
-      const validos = areasMapa.filter((a) =>
-        limitesCidade.contains([Number(a.lat), Number(a.lng)])
-      );
-
-      if (!validos.length) return;
-
-      const pontos = validos.map((a) => [
-        Number(a.lat),
-        Number(a.lng),
-        intensidade(a.luminosidade),
-      ]);
-
-      const cfg = configuracaoPorZoom();
-      heat = L.heatLayer(pontos, {
-        radius: cfg.radius,
-        blur: cfg.blur,
-        max: 0.95,
-        maxZoom: 14,
-        minOpacity: 0.18,
-        pane: 'heatPane',
-        gradient: {
-          0.12: '#00008b',
-          0.32: '#06b6d4',
-          0.5: '#22c55e',
-          0.67: '#eab308',
-          0.82: '#f97316',
-          1: '#ef4444',
-        },
-      }).addTo(mapa);
+      const pontos = areasMapa
+        .filter((a) => limitesCidade.contains([Number(a.lat), Number(a.lng)]))
+        .map((a) => [Number(a.lat), Number(a.lng), intensidade(a.luminosidade)]);
+      const assinatura = JSON.stringify(pontos);
+      if (assinatura === assinaturaCalor) return;
+      if (heat) mapa.removeLayer(heat);
+      heat = criarCalorFixo(pontos, limitesCidade, { minOpacity: 0.18 });
+      if (heat) heat.addTo(mapa);
+      assinaturaCalor = assinatura;
     }
 
     function atualizarTelemetria(medicao) {
@@ -740,7 +707,6 @@
       }
     }
 
-    mapa.on('zoomend', desenharHeatmap);
     refreshBtn.onclick = carregar;
     carregar();
     setInterval(carregar, 5000);

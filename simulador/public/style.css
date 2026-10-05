@@ -863,3 +863,91 @@ header a:hover {
   background: #f5f8ff;
   border-color: #cadcf6;
 }
+
+/* A rota nunca pode encolher a ponto de seus botões invadirem outro cartão. */
+#controles {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  grid-template-rows: auto minmax(230px, 1fr) auto;
+}
+.route-card {
+  display: grid;
+  grid-template-rows: auto minmax(64px, 1fr) auto auto auto;
+  min-height: 230px;
+}
+.stop-list {
+  min-height: 0;
+}
+.route-card > h2,
+.route-card > .helper,
+.route-card > .actions {
+  min-width: 0;
+}
+.route-card > .helper {
+  margin: 0;
+}
+/* iPad em paisagem: a barra lateral precisa comportar os três passos. */
+@media (min-width: 981px) and (max-width: 1099px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr) clamp(390px, 42vw, 460px);
+  }
+  .route-card .hint {
+    display: none;
+  }
+}
+@media (min-width: 1100px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr) clamp(470px, 36vw, 600px);
+  }
+  #controles {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: minmax(290px, 1fr) auto;
+    align-content: stretch;
+  }
+  .download-card {
+    grid-column: 1 / -1;
+  }
+  .route-card {
+    min-height: 290px;
+  }
+  .lighting-card {
+    align-content: start;
+  }
+  .route-card .actions {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .route-card .hint {
+    display: none;
+  }
+  .viewer .layout {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 980px) and (min-height: 700px) and (min-width: 641px) {
+  #controles {
+    grid-template-columns: 1.1fr 1.1fr 0.8fr;
+    grid-template-rows: 1fr;
+  }
+  .route-card {
+    min-height: 230px;
+  }
+}
+@media (max-width: 640px) {
+  #controles {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto;
+    overflow: visible;
+  }
+  .route-card {
+    min-height: 290px;
+  }
+  .lighting-card {
+    gap: 8px;
+  }
+  #controles .actions {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .stop-list {
+    max-height: 240px;
+  }
+}

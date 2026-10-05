@@ -13,6 +13,7 @@
     timer = null,
     bloqueado = false,
     heat = null,
+    assinaturaCalor = null,
     areas = [],
     navegacao = null,
     central = null,
@@ -22,7 +23,7 @@
     $('mensagem').textContent = texto;
     $('mensagem').classList.toggle('error', erro);
   }
-  if (!window.L || !L.heatLayer) {
+  if (!window.L || !window.simpleheat || !window.criarCalorFixo) {
     aviso('Não foi possível carregar o mapa. Recarregue a página.', true);
     return;
   }
@@ -108,34 +109,18 @@
   mapa.getPane('heatPane').style.pointerEvents = 'none';
   mapa.getPane('heatPane').style.opacity = '.70';
   function desenhar() {
-    if (heat) {
-      mapa.removeLayer(heat);
-      heat = null;
-    }
-    if (!areas.length) return;
     const pontos = areas.map((a) => [
       a.lat,
       a.lng,
       Math.max(0.08, Math.min(0.95, 1 - a.lux / 100)),
     ]);
-    heat = L.heatLayer(pontos, {
-      radius: 22 + (mapa.getZoom() - 13) * 5,
-      blur: 20,
-      max: 0.95,
-      maxZoom: 14,
-      minOpacity: 0.2,
-      pane: 'heatPane',
-      gradient: {
-        0.12: '#00008b',
-        0.32: '#06b6d4',
-        0.5: '#22c55e',
-        0.67: '#eab308',
-        0.82: '#f97316',
-        1: '#ef4444',
-      },
-    }).addTo(mapa);
+    const assinatura = JSON.stringify(pontos);
+    if (assinatura === assinaturaCalor) return;
+    if (heat) mapa.removeLayer(heat);
+    heat = criarCalorFixo(pontos, limites, { minOpacity: 0.2 });
+    if (heat) heat.addTo(mapa);
+    assinaturaCalor = assinatura;
   }
-  mapa.on('zoomend', desenhar);
   $('centralizar').onclick = () => mapa.setView(viewer ? CENTRO : [state.lat, state.lng], 14);
   if (viewer) {
     document.body.classList.add('viewer');
