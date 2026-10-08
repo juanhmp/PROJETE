@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Medições - LightSentinel</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #f4f7fb;
+      color: #1f2937;
+    }
+    .topo {
+      background: #0f2747;
+      color: #fff;
+      padding: 18px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .topo h1 { margin: 0; font-size: 22px; }
+    .voltar {
+      color: #fff;
+      text-decoration: none;
+      border: 1px solid rgba(255,255,255,.45);
+      border-radius: 8px;
+      padding: 9px 14px;
+    }
+    main { max-width: 1500px; margin: 28px auto; padding: 0 20px; }
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 18px rgba(0,0,0,.08);
+      overflow: hidden;
+    }
+    .cabecalho {
+      padding: 20px 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .cabecalho h2 { margin: 0; font-size: 20px; }
+    .cabecalho p { margin: 5px 0 0; color: #6b7280; font-size: 14px; }
+    button {
+      border: 0;
+      border-radius: 8px;
+      padding: 10px 14px;
+      cursor: pointer;
+      background: #0f2747;
+      color: white;
+      font-weight: 600;
+    }
+    .tabela-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 1150px; }
+    th, td { padding: 12px 14px; border-bottom: 1px solid #edf0f4; text-align: left; font-size: 13px; white-space: nowrap; }
+    th { background: #f8fafc; color: #374151; position: sticky; top: 0; }
+    tbody tr:hover { background: #f9fbfd; }
+    .vazio, .erro { padding: 32px; text-align: center; color: #6b7280; }
+    .erro { color: #b91c1c; }
+    .contador { font-weight: 700; }
+    @media (max-width: 700px) {
+      .topo, .cabecalho { align-items: flex-start; flex-direction: column; }
+      main { margin-top: 18px; padding: 0 12px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topo">
+    <h1>LightSentinel — Medições</h1>
+    <a class="voltar" href="/admin">Voltar ao painel</a>
+  </header>
+
+  <main>
+    <section class="card">
+      <div class="cabecalho">
+        <div>
+          <h2>Medições registradas</h2>
+          <p><span id="contador" class="contador">0</span> medição(ões) carregada(s)</p>
+        </div>
+        <button id="atualizar" type="button">Atualizar</button>
+      </div>
+
+      <div id="conteudo" class="tabela-wrap">
+        <div class="vazio">Carregando medições...</div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const conteudo = document.getElementById('conteudo');
+    const contador = document.getElementById('contador');
+    const atualizar = document.getElementById('atualizar');
+
+    function texto(valor) {
+      return valor === null || valor === undefined || valor === '' ? '—' : String(valor);
+    }
+
+    function dataHora(valor) {
+      if (!valor) return '—';
+      const data = new Date(valor);
+      if (Number.isNaN(data.getTime())) return texto(valor);
+      return new Intl.DateTimeFormat('pt-BR', {
+        timeZone: 'America/Sao_Paulo',
+        dateStyle: 'short',
+        timeStyle: 'medium'
+      }).format(data);
+    }
+
+    function escapar(valor) {
+      return texto(valor)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+    }
+
+    async function carregarMedicoes() {
+      atualizar.disabled = true;
+      try {
+        const resposta = await fetch('/api/medicoes?limite=1000', {
+          headers: { Accept: 'application/json' }
+        });
+
+        if (resposta.status === 401 || resposta.status === 403) {
+          window.location.href = '/login-admin';
+          return;
+        }
+
+        const dados = await resposta.json();
+        if (!resposta.ok) throw new Error(dados.mensagem || 'Não foi possível carregar as medições.');
+
+        const medicoes = Array.isArray(dados) ? dados : [];
+        contador.textContent = medicoes.length;
+
+        if (!medicoes.length) {
+          conteudo.innerHTML = '<div class="vazio">Nenhuma medição registrada.</div>';
+          return;
+        }
+
+        conteudo.innerHTML = `
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Luminosidade</th>
+                <th>Latitude</th>
+                <th>Longitude</th>
+                <th>Local</th>
+                <th>Origem</th>
+                <th>Lote</th>
+                <th>Data e hora</th>
+                <th>Velocidade</th>
+                <th>Satélites</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${medicoes.map(m => `
+                <tr>
+                  <td>${escapar(m.id)}</td>
+                  <td>${escapar(m.luminosidade)}</td>
+                  <td>${escapar(m.lat)}</td>
+                  <td>${escapar(m.lng)}</td>
+                  <td>${escapar(m.local)}</td>
+                  <td>${escapar(m.origem)}</td>
+                  <td>${escapar(m.lote_id)}</td>
+                  <td>${escapar(dataHora(m.timestamp))}</td>
+                  <td>${escapar(m.velocidade)}</td>
+                  <td>${escapar(m.satelites)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>`;
+      } catch (erro) {
+        conteudo.innerHTML = `<div class="erro">${escapar(erro.message)}</div>`;
+      } finally {
+        atualizar.disabled = false;
+      }
+    }
+
+    atualizar.addEventListener('click', carregarMedicoes);
+    carregarMedicoes();
+  </script>
+</body>
+</html>
